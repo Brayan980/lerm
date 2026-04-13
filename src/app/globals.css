@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 20% 97%; /* Lighter Cool Gray */
+    --foreground: 220 25% 10%; /* Darker, slightly desaturated blue */
+
+    --card: 220 20% 100%; /* White */
+    --card-foreground: 220 25% 10%;
+
+    --popover: 220 20% 100%;
+    --popover-foreground: 220 25% 10%;
+
+    --primary: 210 75% 55%; /* Vibrant, accessible blue */
+    --primary-foreground: 0 0% 100%; /* White */
+
+    --secondary: 210 30% 90%; /* Soft, light blue-gray */
+    --secondary-foreground: 210 50% 30%; /* Darker blue for text on secondary */
+
+    --muted: 210 20% 92%; /* Lighter gray for muted elements */
+    --muted-foreground: 210 10% 40%; /* Softer gray text */
+
+    --accent: 340 80% 60%; /* Lively Pink/Rose */
+    --accent-foreground: 0 0% 100%; /* White text on accent */
+
+    --destructive: 0 75% 55%; 
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 20% 85%; /* Softer border color */
+    --input: 210 20% 98%; /* Very light input background, almost white */
+    --ring: 210 75% 65%; /* Ring color, related to primary */
+
+    --radius: 0.5rem;
+
+    --chart-1: 210 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    
+    /* Sidebar colors - can be adjusted to match the new theme or keep distinct */
+    --sidebar-background: 220 20% 94%; /* Slightly darker than main bg for subtle separation */
+    --sidebar-foreground: 220 25% 8%;
+    --sidebar-primary: 210 75% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 340 80% 58%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 210 20% 80%;
+    --sidebar-ring: 210 75% 60%;
+  }
+
+  .dark {
+    /* Keeping dark theme defaults as specified in original globals.css */
+    --background: 220 15% 5%; /* Very dark blue */
+    --foreground: 220 15% 95%; /* Light text */
+    --card: 220 15% 10%; /* Slightly lighter than bg */
+    --card-foreground: 220 15% 95%;
+    --popover: 220 15% 10%;
+    --popover-foreground: 220 15% 95%;
+    --primary: 210 75% 60%; /* Brighter blue for dark mode */
+    --primary-foreground: 220 15% 10%;
+    --secondary: 220 15% 20%;
+    --secondary-foreground: 220 15% 90%;
+    --muted: 220 15% 20%;
+    --muted-foreground: 220 15% 70%;
+    --accent: 340 80% 65%; /* Brighter pink for dark mode */
+    --accent-foreground: 220 15% 10%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 15% 25%;
+    --input: 220 15% 20%;
+    --ring: 210 75% 70%;
+    --chart-1: 210 70% 55%;
+    --chart-2: 160 60% 50%;
+    --chart-3: 30 80% 60%;
+    --chart-4: 280 65% 65%;
+    --chart-5: 340 75% 60%;
+
+    --sidebar-background: 220 15% 8%;
+    --sidebar-foreground: 220 15% 92%;
+    --sidebar-primary: 210 75% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 340 80% 60%;
+    --sidebar-accent-foreground: 220 15% 5%;
+    --sidebar-border: 220 15% 20%;
+    --sidebar-ring: 210 75% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    /* font-family is set via tailwind.config.ts and layout.tsx */
+  }
+}
