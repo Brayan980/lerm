@@ -389,9 +389,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useEvaluationContext } from "@/contexts/EvaluationContext";
 import type { EvaluationRecord } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
-import { Eye, RefreshCw, Search, ClipboardCheck, BarChart3, ChevronLeft, ChevronRight, X } from "lucide-react";
+import {
+  Eye,
+  RefreshCw,
+  Search,
+  ClipboardCheck,
+  BarChart3,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Menu,
+  FileText,
+  UserCheck,
+} from "lucide-react";
 import Link from "next/link";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { format, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
@@ -411,23 +423,41 @@ export default function EvaluationsPage() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [isSearchMode, setIsSearchMode] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
-  // Cargar la primera página al montar el componente
+
+   // Cargar la primera página al montar el componente
   useEffect(() => {
     fetchRecordsByPage(1, "no_completada");
   }, [fetchRecordsByPage]);
 
-  // Cuando hay búsqueda, cargar todos los registros
+    // Cuando hay búsqueda, cargar todos los registros
   useEffect(() => {
     if (searchTerm.trim()) {
       setIsSearchMode(true);
       fetchRecords();
     } else {
       setIsSearchMode(false);
-      // Si se limpia la búsqueda, volver a la página actual
+        // Si se limpia la búsqueda, volver a la página actual
       fetchRecordsByPage(currentPage, "no_completada");
     }
   }, [searchTerm]);
+
+  
+  useEffect(() => {
+  const handleClickOutside = (event: MouseEvent) => {
+    if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      setIsMenuOpen(false);
+    }
+  };
+
+  document.addEventListener("mousedown", handleClickOutside);
+
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside);
+  };
+}, []);
 
   const handleRefresh = async () => {
     if (isSearchMode) {
@@ -435,6 +465,7 @@ export default function EvaluationsPage() {
     } else {
       await fetchRecordsByPage(currentPage, "no_completada");
     }
+
     toast({
       title: "Lista actualizada",
       description: "Los registros se han actualizado correctamente.",
@@ -446,7 +477,7 @@ export default function EvaluationsPage() {
     setIsSearchMode(false);
   };
 
-  // Filtrado del lado del cliente
+// Filtrado del lado del cliente
   const filteredRecords = useMemo(() => {
     return evaluationRecords
       .filter(
@@ -474,7 +505,7 @@ export default function EvaluationsPage() {
       );
   }, [evaluationRecords, searchTerm]);
 
-  // Calcular el total de páginas
+   // Calcular el total de páginas
   const totalPages = isSearchMode ? 1 : Math.ceil(totalRecords / recordsPerPage);
 
   const handlePageChange = async (page: number) => {
@@ -510,17 +541,17 @@ export default function EvaluationsPage() {
     } else {
       if (currentPage <= 3) {
         for (let i = 1; i <= 4; i++) pages.push(i);
-        pages.push('...');
+        pages.push("...");
         pages.push(totalPages);
       } else if (currentPage >= totalPages - 2) {
         pages.push(1);
-        pages.push('...');
+        pages.push("...");
         for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
       } else {
         pages.push(1);
-        pages.push('...');
+        pages.push("...");
         for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
-        pages.push('...');
+        pages.push("...");
         pages.push(totalPages);
       }
     }
@@ -528,14 +559,65 @@ export default function EvaluationsPage() {
     return pages;
   };
 
+  const menuItems = [
+    {
+      label: "Registro de nuevo Sujeto",
+      href: "/register-data",
+      icon: FileText,
+    },
+    {
+      label: "Pruebas Pendientes",
+      href: "/assistant/pending-tests",
+      icon: UserCheck,
+    },
+  ];
+
   return (
     <AuthWrapper allowedRoles={["Evaluator"]}>
-      <div className="space-y-8">
+      <div className="space-y-8 relative">
+        <div className="relative" ref={menuRef}>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setIsMenuOpen((prev) => !prev)}
+            className="shadow-sm"
+            aria-label="Abrir menú"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+
+          {isMenuOpen && (
+            <div className="absolute left-0 top-12 z-50 w-72 rounded-xl border bg-background shadow-lg p-2">
+              <div className="px-3 py-2 text-sm font-semibold text-muted-foreground">
+                Menú
+              </div>
+
+              <div className="space-y-1">
+                {menuItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-muted transition-colors"
+                  >
+                    <Icon className="h-4 w-4 text-primary" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+
+              </div>
+            </div>
+          )}
+        </div>
+
         <Card className="shadow-xl">
           <CardHeader>
             <CardTitle className="text-3xl font-headline flex items-center">
-              <ListChecks className="mr-3 h-8 w-8 text-primary" /> Evaluaciones
-              Pendientes
+              <ListChecks className="mr-3 h-8 w-8 text-primary" />
+              Evaluaciones Pendientes
             </CardTitle>
             <CardDescription>
               Revisa y gestiona los formularios enviados por los participantes
@@ -551,15 +633,16 @@ export default function EvaluationsPage() {
                 Lista de Envíos
                 {!isSearchMode && totalRecords > 0 && (
                   <span className="ml-2 text-sm font-normal text-muted-foreground">
-                    ({totalRecords} {totalRecords === 1 ? 'registro' : 'registros'} total)
+                    ({totalRecords} {totalRecords === 1 ? "registro" : "registros"} total)
                   </span>
                 )}
                 {isSearchMode && (
                   <span className="ml-2 text-sm font-normal text-muted-foreground">
-                    ({filteredRecords.length} {filteredRecords.length === 1 ? 'resultado' : 'resultados'})
+                    ({filteredRecords.length} {filteredRecords.length === 1 ? "resultado" : "resultados"})
                   </span>
                 )}
               </CardTitle>
+
               <div className="relative w-full sm:w-auto">
                 <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -579,6 +662,7 @@ export default function EvaluationsPage() {
                 )}
               </div>
             </div>
+
             {isSearchMode && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Search className="h-4 w-4" />
@@ -594,6 +678,7 @@ export default function EvaluationsPage() {
               </div>
             )}
           </CardHeader>
+
           <CardContent>
             {isLoadingRecords ? (
               <div className="text-center py-12">
@@ -613,26 +698,31 @@ export default function EvaluationsPage() {
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
+
                   <TableBody>
                     {filteredRecords.length > 0 ? (
                       filteredRecords.map((record) => {
                         const submissionDateObject = record.submission_date
                           ? new Date(record.submission_date)
                           : null;
+
                         return (
                           <TableRow key={record.id} className="hover:bg-muted/50">
                             <TableCell>
                               {record.participantData?.first_name}{" "}
                               {record.participantData?.last_name}
                             </TableCell>
+
                             <TableCell>
                               {submissionDateObject && isValid(submissionDateObject)
                                 ? format(submissionDateObject, "dd MMM yyyy, HH:mm", {
-                                  locale: es,
-                                })
+                                    locale: es,
+                                  })
                                 : "N/A"}
                             </TableCell>
+
                             <TableCell>{record.form_type}</TableCell>
+
                             <TableCell>
                               <div className="flex flex-col gap-1">
                                 {record.paq_classification && (
@@ -641,12 +731,14 @@ export default function EvaluationsPage() {
                                     {record.paq_classification}
                                   </Badge>
                                 )}
+
                                 {record.ipaq_classification && (
                                   <Badge variant="secondary" className="flex items-center w-fit">
                                     <BarChart3 className="mr-1 h-3 w-3" /> IPAQ:{" "}
                                     {record.ipaq_classification}
                                   </Badge>
                                 )}
+
                                 {record.parq_requires_consultation !== undefined &&
                                   record.parq_requires_consultation !== null && (
                                     <Badge
@@ -663,6 +755,7 @@ export default function EvaluationsPage() {
                                         : "No Requiere Consulta"}
                                     </Badge>
                                   )}
+
                                 {!record.paq_classification &&
                                   !record.ipaq_classification &&
                                   (record.parq_requires_consultation === undefined ||
@@ -671,11 +764,13 @@ export default function EvaluationsPage() {
                                   )}
                               </div>
                             </TableCell>
+
                             <TableCell>
                               <Badge variant={getStatusBadgeVariant(record.status)}>
                                 {record.status}
                               </Badge>
                             </TableCell>
+
                             <TableCell className="text-right space-x-2">
                               <Button
                                 variant="outline"
@@ -687,6 +782,7 @@ export default function EvaluationsPage() {
                                   <Eye className="mr-1 h-4 w-4" /> Ver
                                 </Link>
                               </Button>
+
                               <Button
                                 variant="default"
                                 size="sm"
@@ -715,7 +811,6 @@ export default function EvaluationsPage() {
                   </TableBody>
                 </Table>
 
-                {/* Controles de paginación - solo visible cuando NO está en modo búsqueda */}
                 {!isSearchMode && totalPages > 1 && (
                   <div className="mt-6 flex justify-center items-center gap-2">
                     <Button
@@ -727,8 +822,8 @@ export default function EvaluationsPage() {
                       <ChevronLeft className="h-4 w-4" /> Anterior
                     </Button>
 
-                    {getPageNumbers().map((page, index) => (
-                      page === '...' ? (
+                    {getPageNumbers().map((page, index) =>
+                      page === "..." ? (
                         <span key={`ellipsis-${index}`} className="px-2 text-muted-foreground">
                           ...
                         </span>
@@ -743,7 +838,7 @@ export default function EvaluationsPage() {
                           {page}
                         </Button>
                       )
-                    ))}
+                    )}
 
                     <Button
                       variant="outline"
@@ -763,11 +858,13 @@ export default function EvaluationsPage() {
                       {Math.min(currentPage * recordsPerPage, totalRecords)} de {totalRecords} registros
                     </p>
                   )}
+
                   {isSearchMode && (
                     <p className="text-sm text-muted-foreground">
-                      Mostrando {filteredRecords.length} {filteredRecords.length === 1 ? 'resultado' : 'resultados'}
+                      Mostrando {filteredRecords.length} {filteredRecords.length === 1 ? "resultado" : "resultados"}
                     </p>
                   )}
+
                   <Button onClick={handleRefresh} disabled={isLoadingRecords} className="ml-auto">
                     <RefreshCw
                       className={`mr-2 h-4 w-4 ${isLoadingRecords ? "animate-spin" : ""}`}

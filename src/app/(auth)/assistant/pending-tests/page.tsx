@@ -279,7 +279,7 @@ export default function AssistantPendingTestsPage() {
   }, [evaluationRecords, searchTerm]);
 
   return (
-    <AuthWrapper allowedRoles={["Assistant"]}>
+    <AuthWrapper allowedRoles={["Assistant", "Evaluator"]}>
       <div className="space-y-6">
         <Card className="shadow-lg">
           <CardHeader>
