@@ -124,39 +124,9 @@ export default function DashboardPage() {
               </Card>
             </Link>
 
-            <Link href="/appointments" className="block">
-              <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Citas programadas</CardTitle>
-                  <ListChecks className="h-5 w-5 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">Ver Citas</div>
-                  <p className="text-xs text-muted-foreground">Listar citas programadas</p>
-                  <span className="inline-block px-0 pt-2 text-primary">
-                    Ir a Registro de Citas
-                  </span>
-                </CardContent>
-              </Card>
-            </Link>
+            
 
-            <Link href="/appointments/schedule" className="block">
-              <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Programar Citas</CardTitle>
-                  <ListChecks className="h-5 w-5 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">Registrar Citas</div>
-                  <p className="text-xs text-muted-foreground">
-                    Registrar citas con participantes.
-                  </p>
-                  <span className="inline-block px-0 pt-2 text-primary">
-                    Ir a Registro de Citas
-                  </span>
-                </CardContent>
-              </Card>
-            </Link>
+            
 
             <Link href="/categories" className="block">
               <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer">

@@ -370,18 +370,20 @@ export default function AppointmentPage() {
         <div className="space-y-6">
 
 
-            <Button variant="outline" size="sm" onClick={() => router.push('/dashboard')} className="
-        mb-4 print:hidden 
-        border-pink-400 
-        text-pink-600 
-        hover:bg-pink-500 
-        hover:text-white 
-        hover:border-pink-600
-        transition-all duration-200
-    "
-            >
-                <ArrowLeft className="mr-2 h-4 w-4" /> Volver
-            </Button>
+            <Button
+                variant="outline"
+                onClick={() => {
+                    if (window.history.length > 1) {
+                    router.back();
+                    } else {
+                    router.push("/evaluations");
+                    }
+                }}
+                className="mb-4 print:hidden border-pink-500 text-pink-500 hover:bg-pink-50 rounded-xl px-5 py-6 font-normal"
+                >
+                <ArrowLeft className="mr-3 h-5 w-5" />
+                Volver
+                </Button>
 
             <Card className="shadow-lg">
 

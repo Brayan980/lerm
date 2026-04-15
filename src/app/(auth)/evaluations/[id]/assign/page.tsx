@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { useEvaluationContext } from "@/contexts/EvaluationContext";
 import { useToast } from "@/hooks/use-toast";
 import AuthWrapper from "@/components/auth/AuthWrapper";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 import type { EvaluationMode } from "@/lib/types";
 
 export default function AssignTestsPage() {
@@ -50,9 +50,21 @@ export default function AssignTestsPage() {
   };
 
   return (
-    <AuthWrapper allowedRoles={["Evaluator"]}>
-      <div className="max-w-2xl mx-auto space-y-6">
-        <Card className="shadow-xl">
+  <AuthWrapper allowedRoles={["Evaluator"]}>
+    <div className="max-w-2xl mx-auto space-y-6">
+      <div>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => router.back()}
+          className="border-pink-500 text-pink-500 hover:bg-pink-50"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Volver
+        </Button>
+      </div>
+
+      <Card className="shadow-xl">
           <CardHeader>
             <CardTitle className="text-2xl">Asignar Perfil de Evaluación</CardTitle>
             <CardDescription>

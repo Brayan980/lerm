@@ -401,15 +401,19 @@ import {
   Menu,
   FileText,
   UserCheck,
+  ArrowLeft,
+  CalendarDays,
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { format, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
 export default function EvaluationsPage() {
+  const router = useRouter();
   const {
     evaluationRecords,
     fetchRecordsByPage,
@@ -426,25 +430,20 @@ export default function EvaluationsPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-
-   // Cargar la primera página al montar el componente
   useEffect(() => {
     fetchRecordsByPage(1, "no_completada");
   }, [fetchRecordsByPage]);
 
-    // Cuando hay búsqueda, cargar todos los registros
   useEffect(() => {
     if (searchTerm.trim()) {
       setIsSearchMode(true);
       fetchRecords();
     } else {
       setIsSearchMode(false);
-        // Si se limpia la búsqueda, volver a la página actual
       fetchRecordsByPage(currentPage, "no_completada");
     }
   }, [searchTerm]);
 
-  
   useEffect(() => {
   const handleClickOutside = (event: MouseEvent) => {
     if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -477,7 +476,6 @@ export default function EvaluationsPage() {
     setIsSearchMode(false);
   };
 
-// Filtrado del lado del cliente
   const filteredRecords = useMemo(() => {
     return evaluationRecords
       .filter(
@@ -505,7 +503,6 @@ export default function EvaluationsPage() {
       );
   }, [evaluationRecords, searchTerm]);
 
-   // Calcular el total de páginas
   const totalPages = isSearchMode ? 1 : Math.ceil(totalRecords / recordsPerPage);
 
   const handlePageChange = async (page: number) => {
@@ -529,7 +526,6 @@ export default function EvaluationsPage() {
     }
   };
 
-  // Generar los números de página para mostrar
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
     const maxVisible = 5;
@@ -570,312 +566,363 @@ export default function EvaluationsPage() {
       href: "/assistant/pending-tests",
       icon: UserCheck,
     },
+    {
+      label: "Ver Citas",
+      href: "/appointments",
+      icon: CalendarDays,
+    },
   ];
 
   return (
     <AuthWrapper allowedRoles={["Evaluator"]}>
-      <div className="space-y-8 relative">
-        <div className="relative" ref={menuRef}>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setIsMenuOpen((prev) => !prev)}
-            className="shadow-sm"
-            aria-label="Abrir menú"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
+      <div className="relative flex items-start gap-0 bg-white">
+       <div
+          ref={menuRef}
+          className={`
+            ${isMenuOpen ? "w-72" : "w-auto"}
+            shrink-0 transition-all duration-300
+            bg-white
+            self-stretch
+            ${isMenuOpen ? "min-h-screen border-r border-slate-200 pr-4 mr-6" : ""}
+          `}
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.back()}
+              className="border-pink-500 text-pink-500 hover:bg-pink-50"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => setIsMenuOpen((prev) => !prev)}
+              className={`
+                h-11 w-11 rounded-xl bg-white border border-slate-200 shadow-sm
+                hover:bg-slate-50 hover:border-pink-300
+                transition-all duration-200
+                ${isMenuOpen ? "border-pink-300 ring-2 ring-pink-100" : ""}
+              `}
+              aria-label="Abrir menú"
+            >
+              <Menu className="h-5 w-5 text-slate-700" />
+            </Button>
+          </div>
 
           {isMenuOpen && (
-            <div className="absolute left-0 top-12 z-50 w-72 rounded-xl border bg-background shadow-lg p-2">
-              <div className="px-3 py-2 text-sm font-semibold text-muted-foreground">
-                Menú
+            <aside className="w-72 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden animate-in fade-in slide-in-from-left-2 duration-200 mt-1">
+              <div className="border-b border-slate-200 bg-slate-50 px-4 py-4">
+                <p className="text-sm font-semibold text-slate-800">Menú</p>
+                <p className="text-xs text-slate-500">Navegación rápida</p>
               </div>
 
-              <div className="space-y-1">
+              <div className="p-2">
                 {menuItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setIsMenuOpen(false)}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-muted transition-colors"
-                  >
-                    <Icon className="h-4 w-4 text-primary" />
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setIsMenuOpen(false)}
+                      className="group flex items-center gap-3 rounded-xl px-3 py-3 transition-all duration-200 hover:bg-pink-50"
+                    >
+                      <div
+                        className="
+                          flex h-10 w-10 items-center justify-center rounded-xl
+                          border border-slate-200 bg-slate-50
+                          transition-all duration-200
+                          group-hover:border-pink-200 group-hover:bg-white
+                        "
+                      >
+                        <Icon className="h-5 w-5 text-primary" />
+                      </div>
 
+                      <div className="flex flex-col leading-tight">
+                        <span className="text-sm font-medium text-slate-800">
+                          {item.label}
+                        </span>
+                        <span className="text-xs text-slate-500">
+                          Ir a esta sección
+                        </span>
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
-            </div>
+            </aside>
           )}
         </div>
 
-        <Card className="shadow-xl">
-          <CardHeader>
-            <CardTitle className="text-3xl font-headline flex items-center">
-              <ListChecks className="mr-3 h-8 w-8 text-primary" />
-              Evaluaciones Pendientes
-            </CardTitle>
-            <CardDescription>
-              Revisa y gestiona los formularios enviados por los participantes
-              que requieren acción.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-
-        <Card className="shadow-xl">
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-              <CardTitle className="text-xl">
-                Lista de Envíos
-                {!isSearchMode && totalRecords > 0 && (
-                  <span className="ml-2 text-sm font-normal text-muted-foreground">
-                    ({totalRecords} {totalRecords === 1 ? "registro" : "registros"} total)
-                  </span>
-                )}
-                {isSearchMode && (
-                  <span className="ml-2 text-sm font-normal text-muted-foreground">
-                    ({filteredRecords.length} {filteredRecords.length === 1 ? "resultado" : "resultados"})
-                  </span>
-                )}
+        <div className="flex-1 space-y-8">
+          <Card className="shadow-xl">
+            <CardHeader>
+              <CardTitle className="text-3xl font-headline flex items-center">
+                <ListChecks className="mr-3 h-8 w-8 text-primary" />
+                Evaluaciones Pendientes
               </CardTitle>
+              <CardDescription>
+                Revisa y gestiona los formularios enviados por los participantes
+                que requieren acción.
+              </CardDescription>
+            </CardHeader>
+          </Card>
 
-              <div className="relative w-full sm:w-auto">
-                <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Buscar en todas las evaluaciones..."
-                  className="pl-8 pr-8 w-full sm:w-[250px] lg:w-[300px]"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                {searchTerm && (
-                  <button
+          <Card className="shadow-xl">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <CardTitle className="text-xl">
+                  Lista de Envíos
+                  {!isSearchMode && totalRecords > 0 && (
+                    <span className="ml-2 text-sm font-normal text-muted-foreground">
+                      ({totalRecords} {totalRecords === 1 ? "registro" : "registros"} total)
+                    </span>
+                  )}
+                  {isSearchMode && (
+                    <span className="ml-2 text-sm font-normal text-muted-foreground">
+                      ({filteredRecords.length} {filteredRecords.length === 1 ? "resultado" : "resultados"})
+                    </span>
+                  )}
+                </CardTitle>
+
+                <div className="relative w-full sm:w-auto">
+                  <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Buscar en todas las evaluaciones..."
+                    className="pl-8 pr-8 w-full sm:w-[250px] lg:w-[300px]"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={handleClearSearch}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {isSearchMode && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Search className="h-4 w-4" />
+                  <span>Buscando en todos los registros...</span>
+                  <Button
+                    variant="link"
+                    size="sm"
                     onClick={handleClearSearch}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    className="h-auto p-0"
                   >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            </div>
+                    Limpiar búsqueda
+                  </Button>
+                </div>
+              )}
+            </CardHeader>
 
-            {isSearchMode && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Search className="h-4 w-4" />
-                <span>Buscando en todos los registros...</span>
-                <Button
-                  variant="link"
-                  size="sm"
-                  onClick={handleClearSearch}
-                  className="h-auto p-0"
-                >
-                  Limpiar búsqueda
-                </Button>
-              </div>
-            )}
-          </CardHeader>
+            <CardContent>
+              {isLoadingRecords ? (
+                <div className="text-center py-12">
+                  <RefreshCw className="h-8 w-8 animate-spin mx-auto text-primary" />
+                  <p className="mt-4 text-muted-foreground">Cargando evaluaciones...</p>
+                </div>
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Participante</TableHead>
+                        <TableHead>Fecha Envío</TableHead>
+                        <TableHead>Tipo Formulario</TableHead>
+                        <TableHead>Resultado Cuestionario</TableHead>
+                        <TableHead>Estado</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
 
-          <CardContent>
-            {isLoadingRecords ? (
-              <div className="text-center py-12">
-                <RefreshCw className="h-8 w-8 animate-spin mx-auto text-primary" />
-                <p className="mt-4 text-muted-foreground">Cargando evaluaciones...</p>
-              </div>
-            ) : (
-              <>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Participante</TableHead>
-                      <TableHead>Fecha Envío</TableHead>
-                      <TableHead>Tipo Formulario</TableHead>
-                      <TableHead>Resultado Cuestionario</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead className="text-right">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
+                    <TableBody>
+                      {filteredRecords.length > 0 ? (
+                        filteredRecords.map((record) => {
+                          const submissionDateObject = record.submission_date
+                            ? new Date(record.submission_date)
+                            : null;
 
-                  <TableBody>
-                    {filteredRecords.length > 0 ? (
-                      filteredRecords.map((record) => {
-                        const submissionDateObject = record.submission_date
-                          ? new Date(record.submission_date)
-                          : null;
+                          return (
+                            <TableRow key={record.id} className="hover:bg-muted/50">
+                              <TableCell>
+                                {record.participantData?.first_name}{" "}
+                                {record.participantData?.last_name}
+                              </TableCell>
 
-                        return (
-                          <TableRow key={record.id} className="hover:bg-muted/50">
-                            <TableCell>
-                              {record.participantData?.first_name}{" "}
-                              {record.participantData?.last_name}
-                            </TableCell>
+                              <TableCell>
+                                {submissionDateObject && isValid(submissionDateObject)
+                                  ? format(submissionDateObject, "dd MMM yyyy, HH:mm", {
+                                      locale: es,
+                                    })
+                                  : "N/A"}
+                              </TableCell>
 
-                            <TableCell>
-                              {submissionDateObject && isValid(submissionDateObject)
-                                ? format(submissionDateObject, "dd MMM yyyy, HH:mm", {
-                                    locale: es,
-                                  })
-                                : "N/A"}
-                            </TableCell>
+                              <TableCell>{record.form_type}</TableCell>
 
-                            <TableCell>{record.form_type}</TableCell>
-
-                            <TableCell>
-                              <div className="flex flex-col gap-1">
-                                {record.paq_classification && (
-                                  <Badge variant="secondary" className="flex items-center w-fit">
-                                    <BarChart3 className="mr-1 h-3 w-3" /> PAQ:{" "}
-                                    {record.paq_classification}
-                                  </Badge>
-                                )}
-
-                                {record.ipaq_classification && (
-                                  <Badge variant="secondary" className="flex items-center w-fit">
-                                    <BarChart3 className="mr-1 h-3 w-3" /> IPAQ:{" "}
-                                    {record.ipaq_classification}
-                                  </Badge>
-                                )}
-
-                                {record.parq_requires_consultation !== undefined &&
-                                  record.parq_requires_consultation !== null && (
-                                    <Badge
-                                      variant={
-                                        record.parq_requires_consultation
-                                          ? "destructive"
-                                          : "outline"
-                                      }
-                                      className="text-xs w-fit"
-                                    >
-                                      PAR-Q:{" "}
-                                      {record.parq_requires_consultation
-                                        ? "Requiere Consulta"
-                                        : "No Requiere Consulta"}
+                              <TableCell>
+                                <div className="flex flex-col gap-1">
+                                  {record.paq_classification && (
+                                    <Badge variant="secondary" className="flex items-center w-fit">
+                                      <BarChart3 className="mr-1 h-3 w-3" /> PAQ:{" "}
+                                      {record.paq_classification}
                                     </Badge>
                                   )}
 
-                                {!record.paq_classification &&
-                                  !record.ipaq_classification &&
-                                  (record.parq_requires_consultation === undefined ||
-                                    record.parq_requires_consultation === null) && (
-                                    <span className="text-xs text-muted-foreground">N/A</span>
+                                  {record.ipaq_classification && (
+                                    <Badge variant="secondary" className="flex items-center w-fit">
+                                      <BarChart3 className="mr-1 h-3 w-3" /> IPAQ:{" "}
+                                      {record.ipaq_classification}
+                                    </Badge>
                                   )}
-                              </div>
-                            </TableCell>
 
-                            <TableCell>
-                              <Badge variant={getStatusBadgeVariant(record.status)}>
-                                {record.status}
-                              </Badge>
-                            </TableCell>
+                                  {record.parq_requires_consultation !== undefined &&
+                                    record.parq_requires_consultation !== null && (
+                                      <Badge
+                                        variant={
+                                          record.parq_requires_consultation
+                                            ? "destructive"
+                                            : "outline"
+                                        }
+                                        className="text-xs w-fit"
+                                      >
+                                        PAR-Q:{" "}
+                                        {record.parq_requires_consultation
+                                          ? "Requiere Consulta"
+                                          : "No Requiere Consulta"}
+                                      </Badge>
+                                    )}
 
-                            <TableCell className="text-right space-x-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                asChild
-                                className="text-primary border-primary hover:bg-primary/10 hover:text-primary"
-                              >
-                                <Link href={`/evaluations/${record.id}`}>
-                                  <Eye className="mr-1 h-4 w-4" /> Ver
-                                </Link>
-                              </Button>
+                                  {!record.paq_classification &&
+                                    !record.ipaq_classification &&
+                                    (record.parq_requires_consultation === undefined ||
+                                      record.parq_requires_consultation === null) && (
+                                      <span className="text-xs text-muted-foreground">N/A</span>
+                                    )}
+                                </div>
+                              </TableCell>
 
-                              <Button
-                                variant="default"
-                                size="sm"
-                                asChild
-                                className="bg-accent text-accent-foreground hover:bg-accent/90"
-                              >
-                                <Link href={`/evaluations/${record.id}/assign`}>
-                                  <ClipboardCheck className="mr-1 h-4 w-4" /> Asignar
-                                </Link>
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                          {isSearchMode
-                            ? `No se encontraron evaluaciones que coincidan con "${searchTerm}"`
-                            : evaluationRecords.length === 0
-                            ? "No hay evaluaciones pendientes."
-                            : "No hay evaluaciones que coincidan con su búsqueda."}
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                              <TableCell>
+                                <Badge variant={getStatusBadgeVariant(record.status)}>
+                                  {record.status}
+                                </Badge>
+                              </TableCell>
 
-                {!isSearchMode && totalPages > 1 && (
-                  <div className="mt-6 flex justify-center items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={currentPage === 1 || isLoadingRecords}
-                    >
-                      <ChevronLeft className="h-4 w-4" /> Anterior
-                    </Button>
+                              <TableCell className="text-right space-x-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  asChild
+                                  className="text-primary border-primary hover:bg-primary/10 hover:text-primary"
+                                >
+                                  <Link href={`/evaluations/${record.id}`}>
+                                    <Eye className="mr-1 h-4 w-4" /> Ver
+                                  </Link>
+                                </Button>
 
-                    {getPageNumbers().map((page, index) =>
-                      page === "..." ? (
-                        <span key={`ellipsis-${index}`} className="px-2 text-muted-foreground">
-                          ...
-                        </span>
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  asChild
+                                  className="bg-accent text-accent-foreground hover:bg-accent/90"
+                                >
+                                  <Link href={`/evaluations/${record.id}/assign`}>
+                                    <ClipboardCheck className="mr-1 h-4 w-4" /> Asignar
+                                  </Link>
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
                       ) : (
-                        <Button
-                          key={`page-${page}`}
-                          variant={page === currentPage ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => handlePageChange(page as number)}
-                          disabled={isLoadingRecords}
-                        >
-                          {page}
-                        </Button>
-                      )
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            {isSearchMode
+                              ? `No se encontraron evaluaciones que coincidan con "${searchTerm}"`
+                              : evaluationRecords.length === 0
+                              ? "No hay evaluaciones pendientes."
+                              : "No hay evaluaciones que coincidan con su búsqueda."}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+
+                  {!isSearchMode && totalPages > 1 && (
+                    <div className="mt-6 flex justify-center items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1 || isLoadingRecords}
+                      >
+                        <ChevronLeft className="h-4 w-4" /> Anterior
+                      </Button>
+
+                      {getPageNumbers().map((page, index) =>
+                        page === "..." ? (
+                          <span key={`ellipsis-${index}`} className="px-2 text-muted-foreground">
+                            ...
+                          </span>
+                        ) : (
+                          <Button
+                            key={`page-${page}`}
+                            variant={page === currentPage ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handlePageChange(page as number)}
+                            disabled={isLoadingRecords}
+                          >
+                            {page}
+                          </Button>
+                        )
+                      )}
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages || isLoadingRecords}
+                      >
+                        Siguiente <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+
+                  <div className="mt-6 flex justify-between items-center">
+                    {!isSearchMode && totalRecords > 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        Mostrando {((currentPage - 1) * recordsPerPage) + 1} a{" "}
+                        {Math.min(currentPage * recordsPerPage, totalRecords)} de {totalRecords} registros
+                      </p>
                     )}
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={currentPage === totalPages || isLoadingRecords}
-                    >
-                      Siguiente <ChevronRight className="h-4 w-4" />
+                    {isSearchMode && (
+                      <p className="text-sm text-muted-foreground">
+                        Mostrando {filteredRecords.length} {filteredRecords.length === 1 ? "resultado" : "resultados"}
+                      </p>
+                    )}
+
+                    <Button onClick={handleRefresh} disabled={isLoadingRecords} className="ml-auto">
+                      <RefreshCw
+                        className={`mr-2 h-4 w-4 ${isLoadingRecords ? "animate-spin" : ""}`}
+                      />
+                      Actualizar Lista
                     </Button>
                   </div>
-                )}
-
-                <div className="mt-6 flex justify-between items-center">
-                  {!isSearchMode && totalRecords > 0 && (
-                    <p className="text-sm text-muted-foreground">
-                      Mostrando {((currentPage - 1) * recordsPerPage) + 1} a{" "}
-                      {Math.min(currentPage * recordsPerPage, totalRecords)} de {totalRecords} registros
-                    </p>
-                  )}
-
-                  {isSearchMode && (
-                    <p className="text-sm text-muted-foreground">
-                      Mostrando {filteredRecords.length} {filteredRecords.length === 1 ? "resultado" : "resultados"}
-                    </p>
-                  )}
-
-                  <Button onClick={handleRefresh} disabled={isLoadingRecords} className="ml-auto">
-                    <RefreshCw
-                      className={`mr-2 h-4 w-4 ${isLoadingRecords ? "animate-spin" : ""}`}
-                    />
-                    Actualizar Lista
-                  </Button>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </AuthWrapper>
   );

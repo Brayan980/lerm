@@ -457,9 +457,11 @@ import {
   ChevronRight,
   Edit,
   X,
+  ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { format, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
@@ -468,6 +470,7 @@ import { useToast } from "@/hooks/use-toast";
 import { EvaluationMode, EvaluationRecord } from "@/lib/types";
 
 export default function ReviewedEvaluationsPage() {
+  const router = useRouter();
 
   const {
     evaluationRecords,
@@ -622,10 +625,27 @@ export default function ReviewedEvaluationsPage() {
     }
   };
 
-  return (
-    <AuthWrapper allowedRoles={["Evaluator", "Assistant"]}>
-      <div className="space-y-6">
-        <Card className="shadow-lg">
+    return (
+      <AuthWrapper allowedRoles={["Evaluator", "Assistant"]}>
+        <div className="space-y-6">
+          <div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (window.history.length > 1) {
+                  router.back();
+                } else {
+                  router.push("/dashboard");
+                }
+              }}
+              className="border-pink-500 text-pink-500 hover:bg-pink-50 rounded-xl px-5 py-5"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" /> Volver
+            </Button>
+          </div>
+
+          <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="text-3xl font-headline flex items-center">
               <FileText className="mr-3 h-8 w-8 text-primary" /> Historial de

@@ -472,8 +472,18 @@ export default function EvaluationDetailPage() {
   return (
     <AuthWrapper allowedRoles={["Evaluator", "Assistant"]}>
       <div className="space-y-6">
-        <Button variant="outline" size="sm" onClick={() => router.push('/dashboard')} className="mb-4 print:hidden">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Volver
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            if (window.history.length > 1) {
+              router.back();
+            } else {
+              router.push("/evaluations");
+            }
+          }}
+              className="border-pink-500 text-pink-500 hover:bg-pink-50 rounded-xl px-5 py-5"        >
+          <ArrowLeft className="mr-2 h-3 w-3" /> Volver
         </Button>
 
         <Card className="shadow-xl" id="evaluationDetailCard">

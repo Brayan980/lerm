@@ -182,9 +182,11 @@ import {
   UserCheck,
   RefreshCw,
   Search,
+  ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { format, isValid } from "date-fns";
 import { es } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
@@ -243,6 +245,7 @@ const evaluationModeConfig: Record<
 
 
 export default function AssistantPendingTestsPage() {
+  const router = useRouter();
   const { evaluationRecords, fetchRecords } = useEvaluationContext();
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -279,9 +282,26 @@ export default function AssistantPendingTestsPage() {
   }, [evaluationRecords, searchTerm]);
 
   return (
-    <AuthWrapper allowedRoles={["Assistant", "Evaluator"]}>
-      <div className="space-y-6">
-        <Card className="shadow-lg">
+  <AuthWrapper allowedRoles={["Assistant", "Evaluator"]}>
+    <div className="space-y-6">
+      <div>
+        <Button
+          variant="outline"
+          onClick={() => {
+            if (window.history.length > 1) {
+              router.back();
+            } else {
+              router.push("/dashboard");
+            }
+          }}
+          className="border-pink-500 text-pink-500 hover:bg-pink-50 rounded-xl px-5 py-6 font-normal"
+        >
+          <ArrowLeft className="mr-3 h-5 w-5" />
+          Volver
+        </Button>
+      </div>
+
+      <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="text-3xl font-headline flex items-center">
               <UserCheck className="mr-3 h-8 w-8 text-primary" /> Pruebas

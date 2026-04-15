@@ -10,6 +10,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
+import Link from "next/link";
 
 interface Participant {
     email: string;
@@ -302,18 +303,20 @@ export default function AppointmentsPage() {
     return (
         <div className="space-y-6">
 
-            <Button variant="outline" size="sm" onClick={() => router.push('/dashboard')} className="
-        mb-4 print:hidden 
-        border-pink-400 
-        text-pink-600 
-        hover:bg-pink-500 
-        hover:text-white 
-        hover:border-pink-600
-        transition-all duration-200
-    "
-            >
-                <ArrowLeft className="mr-2 h-4 w-4" /> Volver
-            </Button>
+            <Button
+                variant="outline"
+                onClick={() => {
+                    if (window.history.length > 1) {
+                    router.back();
+                    } else {
+                    router.push("/evaluations");
+                    }
+                }}
+                className="mb-4 print:hidden border-pink-500 text-pink-500 hover:bg-pink-50 rounded-xl px-4 py-5 font-normal"
+                >
+                <ArrowLeft className="mr-3 h-5 w-5" />
+                Volver
+                </Button>
 
             {/* Header */}
 
@@ -392,15 +395,35 @@ export default function AppointmentsPage() {
 
             <Card className="shadow-lg">
 
-                <CardHeader>
-                    <CardTitle className="text-blue-700 text-2xl">
+                <CardHeader className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                    <div>
+                        <CardTitle className="text-blue-700 text-2xl">
                         Citas Agendadas
-                    </CardTitle>
-                    <CardDescription>
+                        </CardTitle>
+                        <CardDescription>
                         Haz clic en una fila o en el ícono de la derecha para seleccionar las
                         evaluaciones que se usarán en el cálculo del ETM.
-                    </CardDescription>
-                </CardHeader>
+                        </CardDescription>
+                    </div>
+
+                    <Link href="/appointments/schedule">
+                        <Button
+                        className="
+                            bg-pink-500
+                            hover:bg-pink-600
+                            text-white
+                            px-4
+                            py-2
+                            rounded-lg
+                            shadow-md
+                            transition-all
+                            duration-200
+                        "
+                        >
+                        Registrar Citas
+                        </Button>
+                    </Link>
+                    </CardHeader>
 
 
                 {/* Filtros */}
