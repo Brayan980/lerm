@@ -163,7 +163,7 @@ export default function DeportistasTestPage() {
   }
   if (record === null) {
     return (
-      <AuthWrapper allowedRoles={["Assistant"]}>
+      <AuthWrapper allowedRoles={["Assistant", "Evaluator"]}>
         <Card><CardHeader><CardTitle>Registro no encontrado</CardTitle></CardHeader><CardContent><Link href="/assistant/pending-tests"><ArrowLeft /> Volver</Link></CardContent></Card>
       </AuthWrapper>
     );
@@ -172,7 +172,7 @@ export default function DeportistasTestPage() {
   const participant = record.participantData;
 
   return (
-    <AuthWrapper allowedRoles={["Assistant"]}>
+    <AuthWrapper allowedRoles={["Assistant", "Evaluator"]}>
       <div className="space-y-6">
         <Button variant="outline" onClick={() => router.back()}><ArrowLeft /> Volver</Button>
         

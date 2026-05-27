@@ -72,21 +72,7 @@ export default function DashboardPage() {
               </Card>
             </Link>
 
-            <Link href="/reviewed-evaluations" className="block">
-              <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Historial de Evaluados</CardTitle>
-                  <FileText className="h-5 w-5 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">Ver Completados</div>
-                  <p className="text-xs text-muted-foreground">
-                    Consultar evaluaciones con resultados finales.
-                  </p>
-                  <span className="inline-block px-0 pt-2 text-primary">Ir a Historial</span>
-                </CardContent>
-              </Card>
-            </Link>
+            
 
             <Link href="/evaluations/etm" className="block">
               <Card className="shadow-lg hover:shadow-xl transition-shadow cursor-pointer">

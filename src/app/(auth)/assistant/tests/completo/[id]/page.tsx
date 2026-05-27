@@ -210,6 +210,7 @@ function flattenCompletoResultados(data: CompletoResults): CompletoFormValues {
 export default function CompletoTestPage() {
   const { id: evaluationId } = useParams() as { id: string };
   const router = useRouter();
+  const evaluationDetailUrl = `/evaluations/${evaluationId}`;
   const { getEvaluationRecordById, updateEvaluationRecord } = useEvaluationContext();
   const { toast } = useToast();
   const [record, setRecord] = useState<EvaluationRecord | null | undefined>(undefined);
@@ -327,7 +328,7 @@ export default function CompletoTestPage() {
         description: "Los datos de la prueba Completo han sido guardados exitosamente.",
         action: <CheckCircle className="text-green-500" />,
       });
-      router.push("/assistant/pending-tests");
+      router.push(evaluationDetailUrl);
     } else {
       toast({
         title: "Error al Guardar",
@@ -343,13 +344,13 @@ export default function CompletoTestPage() {
   }
   if (record === null) {
     return (
-      <AuthWrapper allowedRoles={["Assistant"]}>
+      <AuthWrapper allowedRoles={["Assistant", "Evaluator"]}>
         <Card className="shadow-lg">
           <CardHeader><CardTitle>Registro no Encontrado</CardTitle></CardHeader>
           <CardContent>
             <p>No se pudo encontrar la evaluación.</p>
-            <Button variant="outline" asChild className="mt-4">
-              <Link href="/assistant/pending-tests"><ArrowLeft className="mr-2 h-4 w-4" />Volver a Pruebas Pendientes</Link>
+            <Button variant="outline" size="sm" onClick={() => router.push(evaluationDetailUrl)} className="mb-4">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Volver
             </Button>
           </CardContent>
         </Card>
@@ -360,10 +361,10 @@ export default function CompletoTestPage() {
   const participant = record.participantData;
 
   return (
-    <AuthWrapper allowedRoles={["Assistant"]}>
+    <AuthWrapper allowedRoles={["Assistant", "Evaluator"]}>
       <div className="space-y-6">
-        <Button variant="outline" size="sm" onClick={() => router.push("/assistant/pending-tests")} className="mb-4">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Volver a Pruebas Pendientes
+        <Button variant="outline" size="sm" onClick={() => router.push(evaluationDetailUrl)} className="mb-4">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Volver
         </Button>
 
         <Card className="shadow-xl">

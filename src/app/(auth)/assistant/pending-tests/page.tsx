@@ -294,7 +294,7 @@ export default function AssistantPendingTestsPage() {
               router.push("/dashboard");
             }
           }}
-          className="border-pink-500 text-pink-500 hover:bg-pink-50 rounded-xl px-5 py-6 font-normal"
+          className="border-pink-500 text-pink-500 hover:bg-pink-50 rounded-xl px-4 py-5 font-normal"
         >
           <ArrowLeft className="mr-3 h-5 w-5" />
           Volver

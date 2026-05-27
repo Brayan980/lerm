@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useEvaluationContext } from "@/contexts/EvaluationContext";
 import type { EvaluationRecord, FormType, AssignedTests, CalculatedMacroindices, CalculatedComposicionCorporal, ComposicionCorporalCategoria, CalculatedSomatotype, KerrBodyComposition } from "@/lib/types";
-import { ArrowLeft, CheckCircle, Edit, Loader2, PackageCheck, Trash2, XCircle, Calculator, Activity, Users, Shapes, BarChart3, PieChart as PieChartIcon, TrendingUp, Download } from "lucide-react";
+import { ArrowLeft, CheckCircle, Edit, Loader2, PackageCheck, Trash2, XCircle, Calculator, Activity, Users, Shapes, BarChart3, PieChart as PieChartIcon, TrendingUp, Download, PlayCircle } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import { format, isValid } from "date-fns"; // Import isValid
@@ -409,6 +409,23 @@ export default function EvaluationDetailPage() {
   const participantName = participant ?
     (participant.first_name && participant.last_name ? `${participant.first_name} ${participant.last_name}` : (participant.first_name || participant.last_name || "Participante Desconocido"))
     : "Cargando...";
+  const getTestRoute = (record: EvaluationRecord) => {
+    const mode = String(record.evaluation_mode || "").toLowerCase();
+
+    if (mode.includes("completo")) {
+      return `/assistant/tests/completo/${record.id}`;
+    }
+
+    if (mode.includes("express")) {
+      return `/assistant/tests/express/${record.id}`;
+    }
+
+    if (mode.includes("slaughter")) {
+      return `/assistant/tests/2componentes/${record.id}`;
+    }
+
+    return `/assistant/tests/completo/${record.id}`;
+  };
 
 
   if (record === undefined) {
@@ -472,19 +489,31 @@ export default function EvaluationDetailPage() {
   return (
     <AuthWrapper allowedRoles={["Evaluator", "Assistant"]}>
       <div className="space-y-6">
+        <div className="flex items-center gap-3 mb-6 print:hidden">
         <Button
+          type="button"
           variant="outline"
-          size="sm"
-          onClick={() => {
-            if (window.history.length > 1) {
-              router.back();
-            } else {
-              router.push("/evaluations");
-            }
-          }}
-              className="border-pink-500 text-pink-500 hover:bg-pink-50 rounded-xl px-5 py-5"        >
-          <ArrowLeft className="mr-2 h-3 w-3" /> Volver
+          onClick={() => router.push("/evaluations")}
+          className="border-pink-500 text-pink-500 hover:bg-pink-50"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Volver
         </Button>
+
+        {record && (
+          <Button
+            type="button"
+            variant="default"
+            asChild
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            <Link href={getTestRoute(record)}>
+              <PlayCircle className="mr-2 h-4 w-4" />
+              Ir al Test
+            </Link>
+          </Button>
+        )}
+      </div>
 
         <Card className="shadow-xl" id="evaluationDetailCard">
           <CardHeader>

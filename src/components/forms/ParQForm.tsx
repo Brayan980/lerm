@@ -34,7 +34,24 @@ const parQSchema = z.object({
   idNumber: z.string().min(5, "Número de identificación inválido."),
   dob: z.date({ required_error: "Fecha de nacimiento es requerida." }),
   calculatedAge: z.number().optional(),
-  sex: z.enum(["Femenino", "Masculino", "Otro"], { required_error: "Sexo es requerido." }),
+  sex: z.preprocess(
+    (value) => {
+        if (typeof value === "string") {
+        const normalized = value.trim().toLowerCase();
+
+        if (normalized === "femenino") return "Femenino";
+        if (normalized === "masculino") return "Masculino";
+        if (normalized === "otro") return "Otro";
+        if (normalized === "") return undefined;
+        }
+
+        return value;
+    },
+    z.enum(["Femenino", "Masculino", "Otro"], {
+        required_error: "El sexo es obligatorio.",
+        invalid_type_error: "El sexo es obligatorio.",
+    })
+    ),
   phone: z.string().min(7, "Teléfono inválido."),
   address: z.string().min(5, "Dirección es requerida."),
   city: z.string().min(3, "Ciudad es requerida."),
@@ -104,6 +121,19 @@ export default function ParQForm() {
     setIsClient(true);
   }, []);
 
+ const normalizeSex = (
+  sex?: string | null
+    ): "Femenino" | "Masculino" | "Otro" | undefined => {
+    const value = String(sex || "").trim().toLowerCase();
+
+    if (value === "femenino") return "Femenino";
+    if (value === "masculino") return "Masculino";
+    if (value === "otro") return "Otro";
+
+    return undefined;
+    };
+
+
   const form = useForm<ParQFormValues>({
     resolver: zodResolver(parQSchema),
     defaultValues: {
@@ -114,40 +144,125 @@ export default function ParQForm() {
     },
   });
 
-  useEffect(() => {
-    if (isClient) { // Ensure this runs only client-side after initial mount
-      if (initialData) {
-          form.reset({
-              firstName: initialData.first_name || "",
-              lastName: initialData.last_name || "",
-              idNumber: initialData.id_number || "",
-              dob: initialData.dob ? new Date(initialData.dob) : undefined,
-              email: initialData.email || "",
-              calculatedAge: initialData.calculated_age || 0,
-              sex: initialData.sex || undefined,
-              phone: "", 
-              address: "",
-              city: "",
-              emergencyFirstName: "", emergencyLastName: "", emergencyRelationship: "", emergencyPhone: "",
-              q1_heart_condition: undefined, q2_chest_pain_activity: undefined, q3_chest_pain_rest: undefined,
-              q4_dizziness_balance: undefined, q5_bone_joint_problem: undefined, q6_drug_prescription: undefined,
-              q7_other_reason: undefined,
-              acceptedTermsParQ: initialData.accepted_terms, 
-          });
-      } else {
-          form.reset({
-              firstName: "", lastName: "", idNumber: "", dob: undefined, email: "",
-              calculatedAge: 0, sex: undefined, phone: "", address: "", city: "",
-              emergencyFirstName: "", emergencyLastName: "", emergencyRelationship: "", emergencyPhone: "",
-              q1_heart_condition: undefined, q2_chest_pain_activity: undefined, q3_chest_pain_rest: undefined,
-              q4_dizziness_balance: undefined, q5_bone_joint_problem: undefined, q6_drug_prescription: undefined,
-              q7_other_reason: undefined,
-              acceptedTermsParQ: false,
-          });
-      }
-    }
-  }, [initialData, form, isClient]);
+useEffect(() => {
+  if (!isClient) return;
 
+  const loadInitialData = async () => {
+    if (initialData) {
+      let sexFromData = normalizeSex(initialData.sex);
+
+      try {
+        const participantResult = await query(
+          `
+          SELECT first_name, last_name, id_number, dob, calculated_age, sex, email, accepted_terms
+          FROM participants
+          WHERE id_number = $1
+          LIMIT 1
+          `,
+          [initialData.id_number]
+        );
+
+        const participantFromDb = participantResult.rows?.[0];
+
+        if (participantFromDb?.sex) {
+          sexFromData = normalizeSex(participantFromDb.sex);
+        }
+
+        form.reset({
+          firstName: participantFromDb?.first_name || initialData.first_name || "",
+          lastName: participantFromDb?.last_name || initialData.last_name || "",
+          idNumber: participantFromDb?.id_number || initialData.id_number || "",
+          dob: participantFromDb?.dob
+            ? new Date(participantFromDb.dob)
+            : initialData.dob
+              ? new Date(initialData.dob)
+              : undefined,
+          email: participantFromDb?.email || initialData.email || "",
+          calculatedAge:
+            Number(participantFromDb?.calculated_age) ||
+            initialData.calculated_age ||
+            0,
+          sex: sexFromData,
+          phone: "",
+          address: "",
+          city: "",
+          emergencyFirstName: "",
+          emergencyLastName: "",
+          emergencyRelationship: "",
+          emergencyPhone: "",
+          q1_heart_condition: undefined,
+          q2_chest_pain_activity: undefined,
+          q3_chest_pain_rest: undefined,
+          q4_dizziness_balance: undefined,
+          q5_bone_joint_problem: undefined,
+          q6_drug_prescription: undefined,
+          q7_other_reason: undefined,
+          acceptedTermsParQ: Boolean(
+            participantFromDb?.accepted_terms ?? initialData.accepted_terms
+          ),
+        });
+
+        return;
+      } catch (error) {
+        console.error("[ParQForm] Error cargando participante desde DB:", error);
+      }
+
+      form.reset({
+        firstName: initialData.first_name || "",
+        lastName: initialData.last_name || "",
+        idNumber: initialData.id_number || "",
+        dob: initialData.dob ? new Date(initialData.dob) : undefined,
+        email: initialData.email || "",
+        calculatedAge: initialData.calculated_age || 0,
+        sex: sexFromData,
+        phone: "",
+        address: "",
+        city: "",
+        emergencyFirstName: "",
+        emergencyLastName: "",
+        emergencyRelationship: "",
+        emergencyPhone: "",
+        q1_heart_condition: undefined,
+        q2_chest_pain_activity: undefined,
+        q3_chest_pain_rest: undefined,
+        q4_dizziness_balance: undefined,
+        q5_bone_joint_problem: undefined,
+        q6_drug_prescription: undefined,
+        q7_other_reason: undefined,
+        acceptedTermsParQ: Boolean(initialData.accepted_terms),
+      });
+
+      return;
+    }
+
+    form.reset({
+      firstName: "",
+      lastName: "",
+      idNumber: "",
+      dob: undefined,
+      email: "",
+      calculatedAge: 0,
+      sex: undefined,
+      phone: "",
+      address: "",
+      city: "",
+      emergencyFirstName: "",
+      emergencyLastName: "",
+      emergencyRelationship: "",
+      emergencyPhone: "",
+      q1_heart_condition: undefined,
+      q2_chest_pain_activity: undefined,
+      q3_chest_pain_rest: undefined,
+      q4_dizziness_balance: undefined,
+      q5_bone_joint_problem: undefined,
+      q6_drug_prescription: undefined,
+      q7_other_reason: undefined,
+      acceptedTermsParQ: false,
+    });
+  };
+
+  loadInitialData();
+}, [initialData, form, isClient]);
 
   const dobValue = form.watch("dob");
   useEffect(() => {
@@ -325,7 +440,35 @@ export default function ParQForm() {
                         <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01") || !!initialData?.dob} initialFocus captionLayout="dropdown-buttons" fromYear={1900} toYear={new Date().getFullYear()} />
                         </PopoverContent></Popover><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="calculatedAge" render={({ field }) => (<FormItem><FormLabel>Edad (calculada)</FormLabel><FormControl><Input type="number" {...field} value={field.value || ""} readOnly className="bg-muted/50"/></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="sex" render={({ field }) => (<FormItem><FormLabel>Sexo</FormLabel><Select onValueChange={field.onChange} value={field.value} disabled={!!initialData?.sex}><FormControl><SelectTrigger className={initialData?.sex ? "bg-muted/50 cursor-not-allowed" : ""}><SelectValue placeholder="Seleccione el sexo" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Femenino">Femenino</SelectItem><SelectItem value="Masculino">Masculino</SelectItem><SelectItem value="Otro">Otro</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+
+                    <FormField
+                    control={form.control}
+                    name="sex"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Sexo</FormLabel>
+                        <Select
+                            onValueChange={field.onChange}
+                            value={field.value ?? ""}
+                            disabled
+                        >
+                            <FormControl>
+                            <SelectTrigger className="bg-muted/50 cursor-not-allowed">
+                                <SelectValue placeholder="Sexo no cargado" />
+                            </SelectTrigger>
+                            </FormControl>
+
+                            <SelectContent>
+                            <SelectItem value="Femenino">Femenino</SelectItem>
+                            <SelectItem value="Masculino">Masculino</SelectItem>
+                            <SelectItem value="Otro">Otro</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+
                 <FormField control={form.control} name="phone" render={({ field }) => (<FormItem><FormLabel>Teléfono</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="address" render={({ field }) => (<FormItem><FormLabel>Dirección</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="city" render={({ field }) => (<FormItem><FormLabel>Ciudad</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
@@ -348,36 +491,39 @@ export default function ParQForm() {
                     Por favor: si su salud cambia de tal forma que contesta SÍ a alguna de las preguntas anteriores, dígaselo al profesional del fitness. Pregúntele si debería cambiar el plan de actividad física.
                 </FormDescription>
 
-                {( !initialData) && ( 
-                    <div className="space-y-4">
-                        <h3 className="text-lg font-medium">Términos y Condiciones</h3>
-                        <TermsSections />
-                        <FormField
-                            control={form.control}
-                            name="acceptedTermsParQ"
-                            render={({ field }) => (
-                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow">
-                                <FormControl>
-                                <Checkbox
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                    disabled={!!initialData?.accepted_terms} 
-                                />
-                                </FormControl>
-                                <div className="space-y-1 leading-none">
-                                <FormLabel className={initialData?.accepted_terms ? "cursor-not-allowed text-muted-foreground" : ""}>
-                                    He leído y acepto los términos y condiciones.
-                                </FormLabel>
-                                <FormDescription className={initialData?.accepted_terms ? "cursor-not-allowed" : ""}>
-                                    Debe aceptar los términos para continuar.
-                                </FormDescription>
-                                <FormMessage className="!mt-2" />
-                                </div>
-                            </FormItem>
-                            )}
+            {(!initialData) && ( 
+            <div className="space-y-4">
+                <h3 className="text-lg font-medium">Términos y Condiciones</h3>
+                <TermsSections />
+
+                <FormField
+                control={form.control}
+                name="acceptedTermsParQ"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow">
+                    <FormControl>
+                        <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
                         />
+                    </FormControl>
+
+                    <div className="space-y-1 leading-none">
+                        <FormLabel>
+                        He leído y acepto los términos y condiciones.
+                        </FormLabel>
+
+                        <FormDescription>
+                        Debe aceptar los términos para continuar.
+                        </FormDescription>
+
+                        <FormMessage className="!mt-2" />
                     </div>
+                    </FormItem>
                 )}
+                />
+            </div>
+            )}
 
 
                 <Button type="submit" className="w-full" disabled={isLoading}>
@@ -386,64 +532,109 @@ export default function ParQForm() {
                 </Button>
             </form>
             </Form>
-
-            {confirmationData && (
-                <AlertDialog open={showConfirmationDialog} onOpenChange={setShowConfirmationDialog}>
+                  {confirmationData && (
+                    <AlertDialog open={showConfirmationDialog} onOpenChange={setShowConfirmationDialog}>
                     <AlertDialogContent>
-                    <AlertDialogHeader>
+                        <AlertDialogHeader>
                         <AlertDialogTitle>Confirmación PAR-Q</AlertDialogTitle>
                         <AlertDialogDescription className="max-h-[300px] overflow-y-auto">
-                            <span className="block mb-2"><strong>Nombre:</strong> {confirmationData.fullName}</span>
-                            <span className="block mb-4"><strong>Identificación:</strong> {confirmationData.idNumber}</span>
+                            <span className="block mb-2">
+                            <strong>Nombre:</strong> {confirmationData.fullName}
+                            </span>
+
+                            <span className="block mb-4">
+                            <strong>Identificación:</strong> {confirmationData.idNumber}
+                            </span>
+
                             <strong className="block mb-2">Respuestas:</strong>
-                            {confirmationData.answers.map(ans => (
-                                <span key={ans.question} className="block text-xs"><strong>{ans.question}:</strong> {ans.answer}</span>
+
+                            {confirmationData.answers.map((ans) => (
+                            <span key={ans.question} className="block text-xs">
+                                <strong>{ans.question}:</strong> {ans.answer}
+                            </span>
                             ))}
+
                             <span className="block mt-4 font-semibold text-foreground">
-                                {confirmationData.consultationRecommended
-                                    ? "Al menos una respuesta fue SÍ. Se recomienda consultar a un médico antes de iniciar actividad física intensa."
-                                    : "Todas las respuestas fueron NO. Generalmente puede iniciar actividad física."
-                                }
+                            {confirmationData.consultationRecommended
+                                ? "Al menos una respuesta fue SÍ. Se recomienda consultar a un médico antes de iniciar actividad física intensa."
+                                : "Todas las respuestas fueron NO. Generalmente puede iniciar actividad física."}
                             </span>
                         </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => {
+                        </AlertDialogHeader>
+
+                        <AlertDialogFooter>
+                        <AlertDialogCancel
+                            onClick={() => {
                             setShowConfirmationDialog(false);
-                            setInitialData(null); 
-                            form.reset({ 
-                                firstName: "", lastName: "", idNumber: "", dob: undefined, email: "",
-                                sex: undefined, phone: "", address: "", city: "", calculatedAge: 0,
-                                emergencyFirstName: "", emergencyLastName: "", emergencyRelationship: "", emergencyPhone: "",
-                                q1_heart_condition: undefined, q2_chest_pain_activity: undefined, q3_chest_pain_rest: undefined,
-                                q4_dizziness_balance: undefined, q5_bone_joint_problem: undefined, q6_drug_prescription: undefined,
+                            setInitialData(null);
+                            form.reset({
+                                firstName: "",
+                                lastName: "",
+                                idNumber: "",
+                                dob: undefined,
+                                email: "",
+                                sex: undefined,
+                                phone: "",
+                                address: "",
+                                city: "",
+                                calculatedAge: 0,
+                                emergencyFirstName: "",
+                                emergencyLastName: "",
+                                emergencyRelationship: "",
+                                emergencyPhone: "",
+                                q1_heart_condition: undefined,
+                                q2_chest_pain_activity: undefined,
+                                q3_chest_pain_rest: undefined,
+                                q4_dizziness_balance: undefined,
+                                q5_bone_joint_problem: undefined,
+                                q6_drug_prescription: undefined,
                                 q7_other_reason: undefined,
                                 acceptedTermsParQ: false,
                             });
-                            router.push('/register-data?regComplete=0'); 
-                        }}>
+                            router.push("/register-data?regComplete=0");
+                            }}
+                        >
                             Nuevo Registro Completo
                         </AlertDialogCancel>
-                        <AlertDialogAction onClick={() => {
+
+                        <AlertDialogAction
+                            onClick={() => {
                             setShowConfirmationDialog(false);
-                            setInitialData(null); 
-                            form.reset({ 
-                                firstName: "", lastName: "", idNumber: "", dob: undefined, email: "",
-                                sex: undefined, phone: "", address: "", city: "", calculatedAge: 0,
-                                emergencyFirstName: "", emergencyLastName: "", emergencyRelationship: "", emergencyPhone: "",
-                                q1_heart_condition: undefined, q2_chest_pain_activity: undefined, q3_chest_pain_rest: undefined,
-                                q4_dizziness_balance: undefined, q5_bone_joint_problem: undefined, q6_drug_prescription: undefined,
+                            setInitialData(null);
+                            form.reset({
+                                firstName: "",
+                                lastName: "",
+                                idNumber: "",
+                                dob: undefined,
+                                email: "",
+                                sex: undefined,
+                                phone: "",
+                                address: "",
+                                city: "",
+                                calculatedAge: 0,
+                                emergencyFirstName: "",
+                                emergencyLastName: "",
+                                emergencyRelationship: "",
+                                emergencyPhone: "",
+                                q1_heart_condition: undefined,
+                                q2_chest_pain_activity: undefined,
+                                q3_chest_pain_rest: undefined,
+                                q4_dizziness_balance: undefined,
+                                q5_bone_joint_problem: undefined,
+                                q6_drug_prescription: undefined,
                                 q7_other_reason: undefined,
                                 acceptedTermsParQ: false,
                             });
-                            router.push('/'); 
-                        }}>Entendido</AlertDialogAction>
-                    </AlertDialogFooter>
+                            router.push("/evaluations");
+                            }}
+                        >
+                            Entendido
+                        </AlertDialogAction>
+                        </AlertDialogFooter>
                     </AlertDialogContent>
-                </AlertDialog>
-            )}
-        </CardContent>
-        </Card>
-    );
-}
-    
+                    </AlertDialog>
+                )}
+                </CardContent>
+            </Card>
+            );
+            }

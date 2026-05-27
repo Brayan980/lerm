@@ -299,25 +299,38 @@ export default function IpaqForm() {
             </Form>
 
             {results && (
-                <AlertDialog open={showResultsDialog} onOpenChange={setShowResultsDialog}>
-                    <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Resultados del IPAQ</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            <span className="block">Total MET-minutos/semana: {results.totalMETMinutesPerWeek}</span>
-                            <span className="block">Nivel de Actividad Física: <span className="font-semibold text-primary">{results.activityLevel}</span></span>
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogAction onClick={() => {
-                            setShowResultsDialog(false);
-                            form.reset();
-                            setInitialData(null);
-                            router.push('/register-data?regComplete=0');
-                        }}>Entendido y Nuevo Registro</AlertDialogAction>
-                    </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
+            <AlertDialog open={showResultsDialog} onOpenChange={setShowResultsDialog}>
+                <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Resultados del IPAQ</AlertDialogTitle>
+                    <AlertDialogDescription>
+                    <span className="block">
+                        Total MET-minutos/semana: {results.totalMETMinutesPerWeek}
+                    </span>
+                    <span className="block">
+                        Nivel de Actividad Física:{" "}
+                        <span className="font-semibold text-primary">
+                        {results.activityLevel}
+                        </span>
+                    </span>
+                    <span className="block mt-3 font-medium text-foreground">
+                        Debe continuar con el Formulario PAR-Q.
+                    </span>
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+
+                <AlertDialogFooter>
+                    <AlertDialogAction
+                    onClick={() => {
+                        setShowResultsDialog(false);
+                        router.push("/par-q-form?regComplete=1");
+                    }}
+                    >
+                    Continuar al Formulario PAR-Q
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
             )}
         </CardContent>
         </Card>

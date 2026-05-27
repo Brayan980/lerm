@@ -69,103 +69,201 @@ export default function DataRegistrationForm() {
     },
   });
 
-  async function onSubmit(values: DataRegistrationFormValues) {
-    setIsLoading(true);
-    const age = calculateDecimalAge(values.dob);
-    const participantId = `participant-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-    const dobForDb = formatDateFn(values.dob, 'yyyy-MM-dd');
 
-    const participantDataForDb = {
-      id: participantId,
-      first_name: values.firstName,
-      last_name: values.lastName,
-      dob: dobForDb, // Formatted for DATE SQL type
-      calculated_age: age,
-      sex: values.sex,
-      email: values.email.toLowerCase(), // Store email in lowercase
-      id_number: values.idNumber,
-      accepted_terms: values.acceptedTerms,
-    };
+async function onSubmit(
+  values: DataRegistrationFormValues,
+  nextForm: "AUTO" | "PARQ" | "TAMIZAJE" = "AUTO"
+) {
+  setIsLoading(true);
 
-    try {
-      console.log("[DataRegistrationForm] Attempting to insert participant:", participantDataForDb.email);
-      await query(
-        `INSERT INTO participants (id, first_name, last_name, dob, calculated_age, sex, email, id_number, accepted_terms)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [
-          participantDataForDb.id,
-          participantDataForDb.first_name,
-          participantDataForDb.last_name,
-          participantDataForDb.dob,
-          participantDataForDb.calculated_age,
-          participantDataForDb.sex,
-          participantDataForDb.email,
-          participantDataForDb.id_number,
-          participantDataForDb.accepted_terms,
-        ]
-      );
-      console.log("[DataRegistrationForm] Participant inserted successfully:", participantDataForDb.email);
+  const idNumberNormalized = values.idNumber.trim();
+  const emailNormalized = values.email.trim().toLowerCase();
 
-      const participantDataForContext: InitialRegistrationData = {
-        id: participantId,
-        first_name: values.firstName,
-        last_name: values.lastName,
-        dob: values.dob.toISOString(), // ISO string for context and subsequent forms
-        calculated_age: age,
-        sex: values.sex,
-        email: values.email.toLowerCase(),
-        id_number: values.idNumber,
-        accepted_terms: values.acceptedTerms,
-      };
-      setInitialData(participantDataForContext);
+  try {
+    const existingEvaluationByIdNumber = await query(
+      `
+      SELECT er.id
+      FROM participants p
+      JOIN evaluation_records er ON er.participant_id = p.id
+      WHERE p.id_number = $1
+      LIMIT 1
+      `,
+      [idNumberNormalized]
+    );
 
-      toast({
-        title: "Datos registrados en la base de datos",
-        description: "Serás redirigido al formulario correspondiente.",
+    if (existingEvaluationByIdNumber.rows.length > 0) {
+      form.setError("idNumber", {
+        type: "manual",
+        message: "Este número de identificación ya tiene un formulario registrado.",
       });
 
-      // Redirection logic based on age
-      if (age < 14) {
-        router.push("/form/children?regComplete=1");
-      } else if (age >= 14 && age < 18) {
-        router.push("/form/adolescents?regComplete=1");
-      } else if (age >= 18) {
-        router.push("/form/ipaq?regComplete=1");
-      } else {
-        toast({ title: "Información", description: "No hay un formulario específico para esta edad actualmente. Redirigiendo a PAR-Q." });
-        router.push("/par-q-form?regComplete=1");
-      }
-
-    } catch (error: any) {
-      console.error("[DataRegistrationForm] Error saving participant to DB:", error.message, error.stack);
-      let friendlyMessage = "No se pudo guardar el registro del participante.";
-      let errorTitle = "Error de Registro";
-
-      if (error.message?.includes('duplicate key value violates unique constraint "participants_email_key"')) {
-        friendlyMessage = "El correo electrónico ingresado ya está registrado.";
-        form.setError("email", { type: "manual", message: friendlyMessage });
-      } else if (error.message?.includes('duplicate key value violates unique constraint "participants_id_number_key"')) {
-        friendlyMessage = "El número de identificación ingresado ya está registrado.";
-        form.setError("idNumber", { type: "manual", message: friendlyMessage });
-      } else {
-        // For other DB errors, likely connection or configuration issues in production
-        errorTitle = "Error de Base de Datos";
-        friendlyMessage = "No se pudo registrar al participante. Por favor, verifique los logs del servidor para más detalles sobre problemas de conexión o configuración de la base de datos.";
-      }
       toast({
-        title: errorTitle,
-        description: friendlyMessage,
+        title: "Ya está registrado",
+        description: "La cédula ingresada ya tiene un formulario guardado en el sistema.",
         variant: "destructive",
         duration: 10000,
       });
-    } finally {
-      setIsLoading(false);
+
+      return;
     }
+
+    const existingEvaluationByEmail = await query(
+      `
+      SELECT er.id
+      FROM participants p
+      JOIN evaluation_records er ON er.participant_id = p.id
+      WHERE p.email = $1
+      LIMIT 1
+      `,
+      [emailNormalized]
+    );
+
+    if (existingEvaluationByEmail.rows.length > 0) {
+      form.setError("email", {
+        type: "manual",
+        message: "Este correo electrónico ya tiene un formulario registrado.",
+      });
+
+      toast({
+        title: "Ya está registrado",
+        description: "El correo electrónico ingresado ya tiene un formulario guardado en el sistema.",
+        variant: "destructive",
+        duration: 10000,
+      });
+
+      return;
+    }
+
+    await query(
+      `
+      DELETE FROM participants p
+      WHERE (p.id_number = $1 OR p.email = $2)
+      AND NOT EXISTS (
+        SELECT 1
+        FROM evaluation_records er
+        WHERE er.participant_id = p.id
+      )
+      `,
+      [idNumberNormalized, emailNormalized]
+    );
+
+    const age = calculateDecimalAge(values.dob);
+    const participantId = `participant-${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(2, 7)}`;
+    const dobForDb = formatDateFn(values.dob, "yyyy-MM-dd");
+
+    const participantDataForDb = {
+      id: participantId,
+      first_name: values.firstName.trim(),
+      last_name: values.lastName.trim(),
+      dob: dobForDb,
+      calculated_age: age,
+      sex: values.sex,
+      email: emailNormalized,
+      id_number: idNumberNormalized,
+      accepted_terms: values.acceptedTerms,
+    };
+
+    await query(
+      `INSERT INTO participants (id, first_name, last_name, dob, calculated_age, sex, email, id_number, accepted_terms)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
+        participantDataForDb.id,
+        participantDataForDb.first_name,
+        participantDataForDb.last_name,
+        participantDataForDb.dob,
+        participantDataForDb.calculated_age,
+        participantDataForDb.sex,
+        participantDataForDb.email,
+        participantDataForDb.id_number,
+        participantDataForDb.accepted_terms,
+      ]
+    );
+
+    const participantDataForContext: InitialRegistrationData = {
+      id: participantId,
+      first_name: values.firstName.trim(),
+      last_name: values.lastName.trim(),
+      dob: values.dob.toISOString(),
+      calculated_age: age,
+      sex: values.sex as "Femenino" | "Masculino" | "Otro",
+      email: emailNormalized,
+      id_number: idNumberNormalized,
+      accepted_terms: values.acceptedTerms,
+    };
+
+    setInitialData(participantDataForContext);
+
+    toast({
+      title: "Datos registrados en la base de datos",
+      description: "Serás redirigido al formulario correspondiente.",
+    });
+
+    if (nextForm === "PARQ") {
+      router.push("/par-q-form?regComplete=1");
+      return;
+    }
+
+    if (nextForm === "TAMIZAJE") {
+      router.push("/tamizaje?regComplete=1");
+      return;
+    }
+
+    if (age < 14) {
+      router.push("/form/children?regComplete=1");
+    } else if (age >= 14 && age < 18) {
+      router.push("/form/adolescents?regComplete=1");
+    } else if (age >= 18) {
+      router.push("/form/ipaq?regComplete=1");
+    } else {
+      router.push("/par-q-form?regComplete=1");
+    }
+  } catch (error: any) {
+    console.error(
+      "[DataRegistrationForm] Error saving participant to DB:",
+      error.message,
+      error.stack
+    );
+
+    let friendlyMessage = "No se pudo guardar el registro del participante.";
+    let errorTitle = "Error de Registro";
+
+    if (
+      error.message?.includes(
+        'duplicate key value violates unique constraint "participants_email_key"'
+      )
+    ) {
+      friendlyMessage = "El correo electrónico ingresado ya está registrado.";
+      form.setError("email", { type: "manual", message: friendlyMessage });
+    } else if (
+      error.message?.includes(
+        'duplicate key value violates unique constraint "participants_id_number_key"'
+      )
+    ) {
+      friendlyMessage =
+        "El número de identificación ingresado ya está registrado.";
+      form.setError("idNumber", { type: "manual", message: friendlyMessage });
+    } else {
+      errorTitle = "Error de Base de Datos";
+      friendlyMessage =
+        "No se pudo registrar al participante. Por favor, verifique los logs del servidor.";
+    }
+
+    toast({
+      title: errorTitle,
+      description: friendlyMessage,
+      variant: "destructive",
+      duration: 10000,
+    });
+  } finally {
+    setIsLoading(false);
   }
+}
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={form.handleSubmit((values) => onSubmit(values, "AUTO"))} className="space-y-8">
         <div className="grid md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
@@ -331,13 +429,25 @@ export default function DataRegistrationForm() {
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Enviar y Continuar
           </Button>
-          <Button type="button" variant="outline" className="flex-1" onClick={() => router.push('/par-q-form')} disabled={isLoading}>
-            Ir a Formulario PAR-Q
-          </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={form.handleSubmit((values) => onSubmit(values, "PARQ"))}
+              disabled={isLoading}
+            >
+              Ir a Formulario PAR-Q
+            </Button>
 
-          <Button type="button" variant="outline" className="flex-1" onClick={() => router.push('/tamizaje')} disabled={isLoading}>
-            Ir a Tamizaje Preparticipativo
-          </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={form.handleSubmit((values) => onSubmit(values, "TAMIZAJE"))}
+              disabled={isLoading}
+            >
+              Ir a Tamizaje Preparticipativo
+            </Button>
 
         </div>
       </form>

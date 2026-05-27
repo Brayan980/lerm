@@ -582,7 +582,7 @@ export default function ObesosTestPage() {
   }
   if (record === null) {
     return (
-      <AuthWrapper allowedRoles={["Assistant"]}>
+      <AuthWrapper allowedRoles={["Assistant", "Evaluator"]}>
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Registro no Encontrado</CardTitle>
@@ -604,7 +604,7 @@ export default function ObesosTestPage() {
   const participant = record.participantData;
 
   return (
-    <AuthWrapper allowedRoles={["Assistant"]}>
+    <AuthWrapper allowedRoles={["Assistant", "Evaluator"]}>
       <div className="space-y-6">
         <Button
           variant="outline"

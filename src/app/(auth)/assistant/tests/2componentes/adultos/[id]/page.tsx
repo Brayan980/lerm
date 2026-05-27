@@ -144,7 +144,7 @@ export default function AdultosTestPage() {
   }
   if (record === null) {
     return (
-      <AuthWrapper allowedRoles={["Assistant"]}>
+      <AuthWrapper allowedRoles={["Assistant", "Evaluator"]}>
         <Card className="shadow-lg">
           <CardHeader><CardTitle>Registro no Encontrado</CardTitle></CardHeader>
           <CardContent>
@@ -161,7 +161,7 @@ export default function AdultosTestPage() {
   const participant = record.participantData;
 
   return (
-    <AuthWrapper allowedRoles={["Assistant"]}>
+    <AuthWrapper allowedRoles={["Assistant", "Evaluator"]}>
       <div className="space-y-6">
         <Button variant="outline" size="sm" onClick={() => router.push("/assistant/pending-tests")} className="mb-4">
           <ArrowLeft className="mr-2 h-4 w-4" /> Volver a Pruebas Pendientes

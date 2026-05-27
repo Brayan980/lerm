@@ -403,7 +403,7 @@ export const EvaluationProvider = ({ children }: { children: ReactNode }) => {
           paq_score, paq_classification, ipaq_met_minutes, ipaq_classification,
           parq_requires_consultation, form_data, test_results, assigned_tests_config,
           evaluator_notes, assistant_notes, evaluation_mode
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
         [
           newRecordId, recordData.participant_id, recordData.ethnicity, recordData.form_type, submissionDate, status, recordData.accepted_terms,
           recordData.paq_score, recordData.paq_classification, recordData.ipaq_met_minutes, recordData.ipaq_classification,
@@ -493,25 +493,63 @@ export const EvaluationProvider = ({ children }: { children: ReactNode }) => {
 
   
 
-  const deleteEvaluationRecord = useCallback(async (id: string): Promise<{ success: boolean; message?: string }> => {
-    console.log(`[CONTEXT] Deleting evaluation record ID: ${id}`);
-    try {
-      await query('DELETE FROM evaluation_records WHERE id = $1', [id]);
-      console.log(`[CONTEXT] Successfully deleted evaluation record ID: ${id}. Fetching updated records...`);
-      // Recargar la página actual después de eliminar
-      fetchRecordsByPage(currentPage, "completada");
-      return { success: true };
-    } catch (error: any) {
-      console.error(`[CONTEXT_ERROR] Failed to delete evaluation record ID ${id} from DB:`, error);
-      toast({
-        title: "Error al Eliminar Evaluación",
-        description: `No se pudo eliminar. Revise los logs del servidor para detalles. Error: ${error.message || 'Desconocido'}`,
-        variant: "destructive",
-        duration: 10000,
-      });
-      return { success: false, message: error.message || 'Error al eliminar el registro de evaluación.' };
+const deleteEvaluationRecord = useCallback(async (id: string): Promise<{ success: boolean; message?: string }> => {
+  console.log(`[CONTEXT] Deleting evaluation record ID: ${id}`);
+
+  try {
+    // 1. Buscar el participante asociado a la evaluación
+    const { rows } = await query(
+      'SELECT participant_id FROM evaluation_records WHERE id = $1',
+      [id]
+    );
+
+    if (rows.length === 0) {
+      return {
+        success: false,
+        message: 'No se encontró la evaluación para eliminar.',
+      };
     }
-  }, [currentPage, fetchRecordsByPage, toast]);
+
+    const participantId = rows[0].participant_id;
+
+    // 2. Eliminar todas las evaluaciones de ese participante
+    await query(
+      'DELETE FROM evaluation_records WHERE participant_id = $1',
+      [participantId]
+    );
+
+    // 3. Eliminar el participante
+    await query(
+      'DELETE FROM participants WHERE id = $1',
+      [participantId]
+    );
+
+    console.log(`[CONTEXT] Successfully deleted evaluation record and participant ID: ${participantId}`);
+
+    toast({
+      title: "Registro eliminado",
+      description: "Se eliminó la evaluación y el participante completamente.",
+    });
+
+    fetchRecordsByPage(currentPage, "completada");
+
+    return { success: true };
+  } catch (error: any) {
+    console.error(`[CONTEXT_ERROR] Failed to delete full record ID ${id} from DB:`, error);
+
+    toast({
+      title: "Error al Eliminar Registro",
+      description: `No se pudo eliminar completamente. Error: ${error.message || 'Desconocido'}`,
+      variant: "destructive",
+      duration: 10000,
+    });
+
+    return {
+      success: false,
+      message: error.message || 'Error al eliminar el registro completo.',
+    };
+  }
+}, [currentPage, fetchRecordsByPage, toast]);
 
   return (
     <EvaluationContext.Provider

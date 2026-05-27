@@ -562,8 +562,8 @@ export default function EvaluationsPage() {
       icon: FileText,
     },
     {
-      label: "Pruebas Pendientes",
-      href: "/assistant/pending-tests",
+      label: "Ver Completados",
+      href: "/reviewed-evaluations",
       icon: UserCheck,
     },
     {
@@ -586,11 +586,11 @@ export default function EvaluationsPage() {
             ${isMenuOpen ? "min-h-screen border-r border-slate-200 pr-4 mr-6" : ""}
           `}
         >
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex flex-col items-start gap-3 mb-4">
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.back()}
+              onClick={() => router.push("/dashboard")}
               className="border-pink-500 text-pink-500 hover:bg-pink-50"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
