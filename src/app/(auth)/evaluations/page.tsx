@@ -677,16 +677,9 @@ export default function EvaluationsPage() {
               <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                 <CardTitle className="text-xl">
                   Lista de Envíos
-                  {!isSearchMode && totalRecords > 0 && (
-                    <span className="ml-2 text-sm font-normal text-muted-foreground">
-                      ({totalRecords} {totalRecords === 1 ? "registro" : "registros"} total)
-                    </span>
-                  )}
-                  {isSearchMode && (
-                    <span className="ml-2 text-sm font-normal text-muted-foreground">
-                      ({filteredRecords.length} {filteredRecords.length === 1 ? "resultado" : "resultados"})
-                    </span>
-                  )}
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">
+                    ({filteredRecords.length} {filteredRecords.length === 1 ? "registro" : "registros"} total)
+                  </span>
                 </CardTitle>
 
                 <div className="relative w-full sm:w-auto">

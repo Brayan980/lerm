@@ -1,4 +1,4 @@
-
+//pasar a tamizage 
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -566,7 +566,7 @@ useEffect(() => {
                         <AlertDialogCancel
                             onClick={() => {
                             setShowConfirmationDialog(false);
-                            setInitialData(null);
+                            
                             form.reset({
                                 firstName: "",
                                 lastName: "",
@@ -598,38 +598,14 @@ useEffect(() => {
                         </AlertDialogCancel>
 
                         <AlertDialogAction
-                            onClick={() => {
+                          onClick={() => {
                             setShowConfirmationDialog(false);
-                            setInitialData(null);
-                            form.reset({
-                                firstName: "",
-                                lastName: "",
-                                idNumber: "",
-                                dob: undefined,
-                                email: "",
-                                sex: undefined,
-                                phone: "",
-                                address: "",
-                                city: "",
-                                calculatedAge: 0,
-                                emergencyFirstName: "",
-                                emergencyLastName: "",
-                                emergencyRelationship: "",
-                                emergencyPhone: "",
-                                q1_heart_condition: undefined,
-                                q2_chest_pain_activity: undefined,
-                                q3_chest_pain_rest: undefined,
-                                q4_dizziness_balance: undefined,
-                                q5_bone_joint_problem: undefined,
-                                q6_drug_prescription: undefined,
-                                q7_other_reason: undefined,
-                                acceptedTermsParQ: false,
-                            });
-                            router.push("/evaluations");
-                            }}
+                            router.push("/tamizaje?regComplete=1");
+                          }}
                         >
-                            Entendido
+                          Continuar a Tamizaje Preparticipativo
                         </AlertDialogAction>
+
                         </AlertDialogFooter>
                     </AlertDialogContent>
                     </AlertDialog>

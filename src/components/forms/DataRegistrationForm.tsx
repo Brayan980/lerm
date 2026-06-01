@@ -1,4 +1,4 @@
-
+//nuevo registro 
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -192,6 +192,11 @@ async function onSubmit(
       id_number: idNumberNormalized,
       accepted_terms: values.acceptedTerms,
     };
+
+    localStorage.setItem(
+    "participantData",
+    JSON.stringify(participantDataForContext)
+    );
 
     setInitialData(participantDataForContext);
 
@@ -429,25 +434,7 @@ async function onSubmit(
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Enviar y Continuar
           </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={form.handleSubmit((values) => onSubmit(values, "PARQ"))}
-              disabled={isLoading}
-            >
-              Ir a Formulario PAR-Q
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={form.handleSubmit((values) => onSubmit(values, "TAMIZAJE"))}
-              disabled={isLoading}
-            >
-              Ir a Tamizaje Preparticipativo
-            </Button>
+            
 
         </div>
       </form>

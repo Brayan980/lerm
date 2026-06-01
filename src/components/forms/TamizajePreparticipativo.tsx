@@ -1,6 +1,8 @@
+//TamizajePreparticipativo
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -43,6 +45,7 @@ import { format, format as formatDateFn } from "date-fns";
 import { es } from "date-fns/locale";
 import { calculateDecimalAge } from "@/lib/ageCalculator";
 import { query } from "@/lib/db";
+import { useFormData } from "@/contexts/FormDataContext";
 import { useEvaluationContext } from "@/contexts/EvaluationContext";
 
 const tamizajeSchema = z.object({
@@ -52,7 +55,13 @@ const tamizajeSchema = z.object({
   sex: z.enum(["Femenino", "Masculino", "Otro"], { required_error: "El sexo es obligatorio." }),
   email: z.string().email({ message: "Debe ser un correo electrónico válido." }),
   idNumber: z.string().min(5, { message: "El número de identificación debe tener al menos 5 caracteres." }),
-  actividadFisica: z.enum(["si", "no"], { required_error: "Debe responder si participa en actividad física." }),
+
+  actividadFisica: z.enum(["si", "no"], {
+    required_error: "Debe responder si participa en actividad física.",
+  }),
+
+  tipoActividadFisica: z.string().optional(),
+
   tieneEnfermedad: z.enum(["si", "no"], { required_error: "Debe responder si tiene enfermedades." }),
   tieneSintomas: z.enum(["si", "no"], { required_error: "Debe responder si tiene síntomas." }),
   enfermedades: z.array(z.string()).default([]),
@@ -60,16 +69,27 @@ const tamizajeSchema = z.object({
   acceptedTerms: z.boolean().refine((val) => val === true, {
     message: "Debes aceptar los términos y condiciones.",
   }),
+}).superRefine((data, ctx) => {
+  if (data.actividadFisica === "si" && !data.tipoActividadFisica) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["tipoActividadFisica"],
+      message: "Debe seleccionar el tipo de actividad física.",
+    });
+  }
 });
 
 type TamizajeFormValues = z.infer<typeof tamizajeSchema>;
 
 export default function TamizajePreparticipativo() {
+  const router = useRouter();
   const [showDialog, setShowDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [resumenData, setResumenData] = useState<any>(null);
   const { toast } = useToast();
   const { addEvaluationRecord } = useEvaluationContext();
+  const { initialData } = useFormData();
+  const [loadedParticipantId, setLoadedParticipantId] = useState("");
 
   const form = useForm<TamizajeFormValues>({
     resolver: zodResolver(tamizajeSchema),
@@ -81,6 +101,7 @@ export default function TamizajePreparticipativo() {
       email: "",
       idNumber: "",
       actividadFisica: undefined,
+      tipoActividadFisica: "",
       tieneEnfermedad: undefined,
       tieneSintomas: undefined,
       enfermedades: [],
@@ -88,6 +109,138 @@ export default function TamizajePreparticipativo() {
       acceptedTerms: false,
     },
   });
+
+  const actividadFisicaSeleccionada = form.watch("actividadFisica");
+  const fechaNacimientoSeleccionada = form.watch("dob");
+
+  const edadCalculada = fechaNacimientoSeleccionada
+    ? calculateDecimalAge(fechaNacimientoSeleccionada)
+    : 0;
+
+  const esMenorDe14 = edadCalculada < 14;
+
+useEffect(() => {
+  const normalizeSex = (
+    value: any
+  ): "Femenino" | "Masculino" | "Otro" | undefined => {
+    if (!value) return undefined;
+
+    const sexValue = String(value).trim().toLowerCase();
+
+    if (
+      sexValue === "masculino" ||
+      sexValue === "m" ||
+      sexValue === "male" ||
+      sexValue === "hombre" ||
+      sexValue.includes("mas")
+    ) {
+      return "Masculino";
+    }
+
+    if (
+      sexValue === "femenino" ||
+      sexValue === "f" ||
+      sexValue === "female" ||
+      sexValue === "mujer" ||
+      sexValue.includes("fem")
+    ) {
+      return "Femenino";
+    }
+
+    if (sexValue === "otro" || sexValue === "other") {
+      return "Otro";
+    }
+
+    return undefined;
+  };
+
+  const loadParticipantData = async () => {
+    let localData: any = {};
+
+    const savedData = localStorage.getItem("participantData");
+
+    if (savedData) {
+      try {
+        localData = JSON.parse(savedData);
+      } catch (error) {
+        console.error("Error leyendo participantData:", error);
+      }
+    }
+
+    const baseData: any = initialData || localData || {};
+
+    const idNumber =
+      baseData.id_number ||
+      baseData.idNumber ||
+      baseData.numeroIdentificacion ||
+      baseData.identificacion ||
+      baseData.documento ||
+      "";
+
+    let dbData: any = {};
+
+    if (idNumber) {
+      try {
+        const participantResult = await query(
+          `
+          SELECT id, first_name, last_name, id_number, dob, calculated_age, sex, email, accepted_terms
+          FROM participants
+          WHERE id_number = $1
+          LIMIT 1
+          `,
+          [idNumber]
+        );
+
+        dbData = participantResult.rows?.[0] || {};
+      } catch (error) {
+        console.error("[TamizajePreparticipativo] Error cargando participante desde DB:", error);
+      }
+    }
+
+    const participantId = dbData.id || baseData.id || "";
+    const firstName = dbData.first_name || baseData.first_name || baseData.firstName || baseData.nombres || "";
+    const lastName = dbData.last_name || baseData.last_name || baseData.lastName || baseData.apellidos || "";
+    const dobValue = dbData.dob || baseData.dob || baseData.fechaNacimiento || baseData.birthDate;
+    const email = dbData.email || baseData.email || baseData.correo || baseData.correoElectronico || "";
+    const finalIdNumber = dbData.id_number || baseData.id_number || baseData.idNumber || baseData.numeroIdentificacion || baseData.identificacion || baseData.documento || "";
+
+    const sexoNormalizado = normalizeSex(
+      dbData.sex ||
+      baseData.sex ||
+      baseData.sexo ||
+      baseData.genero ||
+      baseData.gender
+    );
+
+    setLoadedParticipantId(participantId);
+
+    form.reset({
+      ...form.getValues(),
+      firstName,
+      lastName,
+      dob: dobValue ? new Date(dobValue) : undefined,
+      sex: sexoNormalizado,
+      email,
+      idNumber: finalIdNumber,
+      acceptedTerms: Boolean(dbData.accepted_terms ?? baseData.accepted_terms ?? false),
+    });
+
+    if (sexoNormalizado) {
+      form.setValue("sex", sexoNormalizado, {
+        shouldValidate: true,
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+    }
+
+    console.log("Tamizaje baseData:", baseData);
+    console.log("Tamizaje dbData:", dbData);
+    console.log("Sexo normalizado:", sexoNormalizado);
+  };
+
+  loadParticipantData();
+}, [initialData, form]);
+
 
   const enfermedadesLista = [
     "Enfermedad cardiaca o vascular",
@@ -152,13 +305,32 @@ export default function TamizajePreparticipativo() {
     }
   };
 
-  async function onSubmit(values: TamizajeFormValues) {
-    setIsLoading(true);
-    const age = calculateDecimalAge(values.dob);
-    const participantId = `participant-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-    const dobForDb = formatDateFn(values.dob, 'yyyy-MM-dd');
+async function onSubmit(values: TamizajeFormValues) {
+  setIsLoading(true);
 
-    const resumen = calcularResumen(values.actividadFisica, values.tieneEnfermedad, values.tieneSintomas);
+  const participantId = initialData?.id || loadedParticipantId;
+
+  if (!participantId) {
+    toast({
+      title: "Datos incompletos",
+      description:
+        "No se encontraron los datos del participante. Inicie nuevamente desde el registro.",
+      variant: "destructive",
+    });
+
+    setIsLoading(false);
+    return;
+  }
+
+  try {
+    const age = calculateDecimalAge(values.dob);
+    const dobForDb = formatDateFn(values.dob, "yyyy-MM-dd");
+
+    const resumen = calcularResumen(
+      values.actividadFisica,
+      values.tieneEnfermedad,
+      values.tieneSintomas
+    );
 
     const participantDataForDb = {
       id: participantId,
@@ -172,118 +344,84 @@ export default function TamizajePreparticipativo() {
       accepted_terms: values.acceptedTerms,
     };
 
-    // Preparar datos del tamizaje para guardar
     const tamizajeResponses = {
+      participant: participantDataForDb,
       actividadFisica: values.actividadFisica,
+      tipoActividadFisica: values.tipoActividadFisica || "",
+      edadCalculada: age,
       tieneEnfermedad: values.tieneEnfermedad,
       enfermedades: values.enfermedades,
       tieneSintomas: values.tieneSintomas,
       sintomas: values.sintomas,
       revision: resumen.revision,
-      intensidad: resumen.intensidad
+      intensidad: resumen.intensidad,
     };
 
+    const submissionDate = new Date().toISOString();
+    const status = "Nueva";
 
-    try {
-      console.log("[TamizajePreparticipativo] Attempting to insert participant:", participantDataForDb.email);
-      await query(
-        `INSERT INTO participants (id, first_name, last_name, dob, calculated_age, sex, email, id_number, accepted_terms)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [
-          participantDataForDb.id,
-          participantDataForDb.first_name,
-          participantDataForDb.last_name,
-          participantDataForDb.dob,
-          participantDataForDb.calculated_age,
-          participantDataForDb.sex,
-          participantDataForDb.email,
-          participantDataForDb.id_number,
-          participantDataForDb.accepted_terms,
-        ]
-      );
-      console.log("[TamizajePreparticipativo] Participant inserted successfully:", participantDataForDb.email);
+    await query(
+      `INSERT INTO evaluation_records (
+        id,
+        participant_id,
+        form_type,
+        submission_date,
+        status,
+        accepted_terms,
+        form_data,
+        tamizaje_classification
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        `eval-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        participantId,
+        "TAMIZAJE",
+        submissionDate,
+        status,
+        true,
+        JSON.stringify(tamizajeResponses),
+        resumen.revision,
+      ]
+    );
 
-      const submissionDate = new Date().toISOString();
-      const status = 'Nueva';
+    console.log(
+      "[TamizajePreparticipativo] Evaluation record inserted successfully"
+    );
 
-      // Insertar evaluación en evaluation_records
-      await query(
-        `INSERT INTO evaluation_records (
-          id, participant_id, form_type, submission_date, status, accepted_terms, form_data, tamizaje_classification
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [
-          `eval-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-          participantId,
-          'TAMIZAJE',
-          submissionDate,
-          status,
-          true,
-          JSON.stringify(tamizajeResponses),
-          resumen.revision, // Guardar el resumen del tamizaje
-        ]
-      );
-      console.log("[TamizajePreparticipativo] Evaluation record inserted successfully");
+    setResumenData({
+      ...values,
+      resumen,
+    });
 
-      // Guardar datos del tamizaje (puedes crear una tabla separada para esto)
-      // Por ahora solo mostramos el resumen
+    toast({
+      title: "Datos registrados exitosamente",
+      description: "El tamizaje se ha completado correctamente.",
+    });
 
-      setResumenData({
-        ...values,
-        resumen,
-      });
+    // Limpia los datos del sujeto anterior
+    localStorage.removeItem("participantData");
 
-      toast({
-        title: "Datos registrados exitosamente",
-        description: "El tamizaje se ha completado correctamente.",
-      });
+    // Regresa al registro de nuevo sujeto
+    router.replace("/register-data");
 
+  } catch (error: any) {
+    console.error(
+      "[TamizajePreparticipativo] Error saving tamizaje to DB:",
+      error.message,
+      error.stack
+    );
 
-      form.reset({
-        firstName: "",
-        lastName: "",
-        dob: undefined,
-        sex: undefined,
-        email: "",
-        idNumber: "",
-        actividadFisica: undefined,
-        tieneEnfermedad: undefined,
-        tieneSintomas: undefined,
-        enfermedades: [],
-        sintomas: [],
-        acceptedTerms: false,
-
-      });
-
-      setShowDialog(true);
-
-      setShowDialog(true);
-
-    } catch (error: any) {
-      console.error("[TamizajePreparticipativo] Error saving participant to DB:", error.message, error.stack);
-      let friendlyMessage = "No se pudo guardar el registro del participante.";
-      let errorTitle = "Error de Registro";
-
-      if (error.message?.includes('duplicate key value violates unique constraint "participants_email_key"')) {
-        friendlyMessage = "El correo electrónico ingresado ya está registrado.";
-        form.setError("email", { type: "manual", message: friendlyMessage });
-      } else if (error.message?.includes('duplicate key value violates unique constraint "participants_id_number_key"')) {
-        friendlyMessage = "El número de identificación ingresado ya está registrado.";
-        form.setError("idNumber", { type: "manual", message: friendlyMessage });
-      } else {
-        errorTitle = "Error de Base de Datos";
-        friendlyMessage = "No se pudo registrar al participante. Por favor, verifique los logs del servidor.";
-      }
-      toast({
-        title: errorTitle,
-        description: friendlyMessage,
-        variant: "destructive",
-        duration: 10000,
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    toast({
+      title: "Error de Base de Datos",
+      description:
+        "No se pudo guardar el tamizaje. Por favor, verifique los logs del servidor.",
+      variant: "destructive",
+      duration: 10000,
+    });
+  } finally {
+    setIsLoading(false);
   }
+}
 
   return (
     <Card className="max-w-2xl mx-auto shadow-md">
@@ -309,7 +447,12 @@ export default function TamizajePreparticipativo() {
                   <FormItem>
                     <FormLabel>Nombres</FormLabel>
                     <FormControl>
-                      <Input placeholder="Sus nombres" {...field} />
+                      <Input
+                        placeholder="Sus nombres"
+                        {...field}
+                        readOnly
+                        className="bg-muted cursor-not-allowed"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -322,7 +465,12 @@ export default function TamizajePreparticipativo() {
                   <FormItem>
                     <FormLabel>Apellidos</FormLabel>
                     <FormControl>
-                      <Input placeholder="Sus apellidos" {...field} />
+                      <Input
+                        placeholder="Sus apellidos"
+                        {...field}
+                        readOnly
+                        className="bg-muted cursor-not-allowed"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -342,9 +490,11 @@ export default function TamizajePreparticipativo() {
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
+                          type="button"
                           variant={"outline"}
+                          disabled
                           className={cn(
-                            "w-full pl-3 text-left font-normal",
+                            "w-full pl-3 text-left font-normal bg-muted cursor-not-allowed",
                             !field.value && "text-muted-foreground"
                           )}
                         >
@@ -389,10 +539,11 @@ export default function TamizajePreparticipativo() {
                     <FormLabel>Sexo</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      value={field.value ?? ""} // ✅ evita conflicto con undefined
+                      value={field.value ?? ""}
+                      disabled
                     >
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="bg-muted cursor-not-allowed">
                           <SelectValue placeholder="Seleccione el sexo" />
                         </SelectTrigger>
                       </FormControl>
@@ -439,7 +590,13 @@ export default function TamizajePreparticipativo() {
                   <FormItem>
                     <FormLabel>Correo Electrónico</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="su.correo@ejemplo.com" {...field} />
+                      <Input
+                      type="email"
+                      placeholder="su.correo@ejemplo.com"
+                      {...field}
+                      readOnly
+                      className="bg-muted cursor-not-allowed"
+                    />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -453,7 +610,12 @@ export default function TamizajePreparticipativo() {
                   <FormItem>
                     <FormLabel>Número de Identificación</FormLabel>
                     <FormControl>
-                      <Input placeholder="Su número de identificación" {...field} />
+                      <Input
+                      placeholder="Su número de identificación"
+                      {...field}
+                      readOnly
+                      className="bg-muted cursor-not-allowed"
+                    />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -493,7 +655,10 @@ export default function TamizajePreparticipativo() {
                           type="radio"
                           value="no"
                           checked={field.value === "no"}
-                          onChange={() => field.onChange("no")}
+                          onChange={() => {
+                            field.onChange("no");
+                            form.setValue("tipoActividadFisica", "");
+                          }}
                           className="w-4 h-4"
                         />
                         <span>No</span>
@@ -504,6 +669,66 @@ export default function TamizajePreparticipativo() {
                 </FormItem>
               )}
             />
+
+            {actividadFisicaSeleccionada === "si" && (
+              <FormField
+                control={form.control}
+                name="tipoActividadFisica"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base font-semibold">
+                      Tipo de participación en actividad física
+                    </FormLabel>
+
+                    <FormDescription>
+                      Según la edad calculada del participante, seleccione el tipo de actividad que realiza.
+                    </FormDescription>
+
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value ?? ""}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccione una opción" />
+                        </SelectTrigger>
+                      </FormControl>
+
+                      <SelectContent>
+                        {esMenorDe14 ? (
+                          <>
+                            <SelectItem value="deporte_escolar">
+                              Deporte escolar
+                            </SelectItem>
+                            <SelectItem value="deporte_normal">
+                              Deporte normal / recreativo
+                            </SelectItem>
+                          </>
+                        ) : (
+                          <>
+                            <SelectItem value="deportista_competencia">
+                              Deportista de competencia
+                            </SelectItem>
+                            <SelectItem value="deportista_recreativo">
+                              Deportista recreativo
+                            </SelectItem>
+                            <SelectItem value="normal_ejercicio">
+                              Normal / solo hacer ejercicio
+                            </SelectItem>
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
+
+                    <FormDescription>
+                      Edad calculada: {edadCalculada.toFixed(1)} años
+                    </FormDescription>
+
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* 2. Enfermedades */}
             <div className="space-y-4">
@@ -724,6 +949,20 @@ export default function TamizajePreparticipativo() {
                 <div>
                   <strong>Participa en actividad física:</strong> {resumenData?.actividadFisica?.toUpperCase() || "Sin responder"}
                 </div>
+                {resumenData?.actividadFisica === "si" && resumenData?.tipoActividadFisica && (
+                  <div>
+                    <strong>Tipo de actividad física:</strong>{" "}
+                    {resumenData.tipoActividadFisica === "deporte_escolar"
+                      ? "Deporte escolar"
+                      : resumenData.tipoActividadFisica === "deporte_normal"
+                      ? "Deporte normal / recreativo"
+                      : resumenData.tipoActividadFisica === "deportista_competencia"
+                      ? "Deportista de competencia"
+                      : resumenData.tipoActividadFisica === "deportista_recreativo"
+                      ? "Deportista recreativo"
+                      : "Normal / solo hacer ejercicio"}
+                  </div>
+                )}
                 <div>
                   <strong>Enfermedad:</strong> {resumenData?.tieneEnfermedad?.toUpperCase() || "Sin responder"}
                 </div>

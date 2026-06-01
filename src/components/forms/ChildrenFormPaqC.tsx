@@ -1,4 +1,4 @@
-
+//niños
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -171,7 +171,7 @@ export default function ChildrenFormPaqC() {
             evalIdNumber: initialData.id_number || "",
             evalSex: initialData.sex || undefined,
             evalDob: initialData.dob ? new Date(initialData.dob) : undefined,
-            evalCalculatedAge: initialData.calculated_age || 0,
+            evalCalculatedAge: Number(Number(initialData.calculated_age ?? 0).toFixed(2)),
             evalWeight: 0,
             evalHeight: 0,
             paqC1_activities: Object.fromEntries(paqCActivities.map(act => [act.id, null])),
@@ -184,11 +184,12 @@ export default function ChildrenFormPaqC() {
   }, [initialData, form]);
 
   const evalDobValue = form.watch("evalDob");
-  useEffect(() => {
-    if (evalDobValue) {
-      form.setValue("evalCalculatedAge", calculateDecimalAge(evalDobValue));
-    }
-  }, [evalDobValue, form]);
+useEffect(() => {
+  if (evalDobValue) {
+    const age = Number(calculateDecimalAge(evalDobValue).toFixed(2));
+    form.setValue("evalCalculatedAge", age);
+  }
+}, [evalDobValue, form]);
 
   const paqC10EnfermoValue = form.watch("paqC10_enfermo");
 
@@ -219,10 +220,12 @@ export default function ChildrenFormPaqC() {
 
     if (result.success) {
         toast({
-          title: "Formulario Enviado",
-          description: "Los datos del niño han sido registrados y procesados.",
+        title: "Formulario PAQ-C enviado",
+        description: "Ahora continuará con el formulario PAR-Q.",
         });
-        setShowResultsDialog(true);
+
+        router.push("/par-q-form?regComplete=1");
+        return;
     } else {
         toast({
             title: "Error al Guardar",
@@ -273,7 +276,28 @@ export default function ChildrenFormPaqC() {
                         <PopoverContent className="w-auto p-0" align="start">
                         <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01") || !!initialData?.dob} initialFocus captionLayout="dropdown-buttons" fromYear={2000} toYear={new Date().getFullYear()} />
                         </PopoverContent></Popover><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="evalCalculatedAge" render={({ field }) => (<FormItem><FormLabel>Edad (decimal)</FormLabel><FormControl><Input type="number" {...field} value={field.value || 0} readOnly className="bg-muted/50"/></FormControl><FormMessage /></FormItem>)} />
+
+                        <FormField
+                        control={form.control}
+                        name="evalCalculatedAge"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Edad (decimal)</FormLabel>
+                            <FormControl>
+                                <Input
+                                type="number"
+                                step="0.01"
+                                {...field}
+                                value={Number(field.value ?? 0).toFixed(2)}
+                                readOnly
+                                className="bg-muted/50"
+                                />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                
                 <FormField control={form.control} name="evalWeight" render={({ field }) => (<FormItem><FormLabel>Peso (kg)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="evalHeight" render={({ field }) => (<FormItem><FormLabel>Talla (cm)</FormLabel><FormControl><Input type="number" step="0.1" {...field} /></FormControl><FormMessage /></FormItem>)} />
                 </div>
@@ -320,29 +344,7 @@ export default function ChildrenFormPaqC() {
                 </Button>
             </form>
             </Form>
-            {results && (
-            <AlertDialog open={showResultsDialog} onOpenChange={setShowResultsDialog}>
-                <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Resultados del PAQ-C</AlertDialogTitle>
-                    <AlertDialogDescription>
-                    <div>Puntaje Obtenido: {results.score}</div>
-                    <div>Clasificación: <span className="font-semibold text-primary">{results.classification}</span></div>
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogAction onClick={() => {
-                    setShowResultsDialog(false);
-                    form.reset();
-                    setInitialData(null);
-                    router.push('/register-data?regComplete=0');
-                    }}>
-                    Entendido y Nuevo Registro
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-            )}
+            
         </CardContent>
         </Card>
     );

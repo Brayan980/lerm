@@ -494,59 +494,93 @@ export const EvaluationProvider = ({ children }: { children: ReactNode }) => {
   
 
 const deleteEvaluationRecord = useCallback(async (id: string): Promise<{ success: boolean; message?: string }> => {
-  console.log(`[CONTEXT] Deleting evaluation record ID: ${id}`);
+  console.log(`[CONTEXT] Deleting ONLY evaluation record ID: ${id}`);
 
   try {
-    // 1. Buscar el participante asociado a la evaluación
+    // 1. Buscar el participante asociado a la evaluación seleccionada
     const { rows } = await query(
-      'SELECT participant_id FROM evaluation_records WHERE id = $1',
+      `
+      SELECT participant_id
+      FROM evaluation_records
+      WHERE id = $1
+      LIMIT 1
+      `,
       [id]
     );
 
     if (rows.length === 0) {
       return {
         success: false,
-        message: 'No se encontró la evaluación para eliminar.',
+        message: "No se encontró la evaluación para eliminar.",
       };
     }
 
     const participantId = rows[0].participant_id;
 
-    // 2. Eliminar todas las evaluaciones de ese participante
+    // 2. Eliminar SOLO la evaluación seleccionada
     await query(
-      'DELETE FROM evaluation_records WHERE participant_id = $1',
+      `
+      DELETE FROM evaluation_records
+      WHERE id = $1
+      `,
+      [id]
+    );
+
+    // 3. Revisar si ese participante todavía tiene otras evaluaciones
+    const remainingResult = await query(
+      `
+      SELECT COUNT(*)::int AS total
+      FROM evaluation_records
+      WHERE participant_id = $1
+      `,
       [participantId]
     );
 
-    // 3. Eliminar el participante
-    await query(
-      'DELETE FROM participants WHERE id = $1',
-      [participantId]
-    );
+    const totalRemaining = remainingResult.rows?.[0]?.total || 0;
 
-    console.log(`[CONTEXT] Successfully deleted evaluation record and participant ID: ${participantId}`);
+    // 4. Si ya no tiene más evaluaciones, eliminar también el participante
+    // Esto libera la cédula y el correo para poder registrar otra vez.
+    if (totalRemaining === 0) {
+      await query(
+        `
+        DELETE FROM participants
+        WHERE id = $1
+        `,
+        [participantId]
+      );
+
+      console.log(`[CONTEXT] Participant ${participantId} deleted because it had no remaining evaluations.`);
+    }
+
+    // 5. Actualizar la lista local sin borrar las demás evaluaciones
+    setEvaluationRecords((prevRecords) =>
+      prevRecords.filter((record) => record.id !== id)
+    );
 
     toast({
-      title: "Registro eliminado",
-      description: "Se eliminó la evaluación y el participante completamente.",
+      title: "Evaluación eliminada",
+      description:
+        totalRemaining === 0
+          ? "Se eliminó la evaluación y también el participante porque ya no tenía más registros."
+          : "Se eliminó solo la evaluación seleccionada.",
     });
 
     fetchRecordsByPage(currentPage, "completada");
 
     return { success: true };
   } catch (error: any) {
-    console.error(`[CONTEXT_ERROR] Failed to delete full record ID ${id} from DB:`, error);
+    console.error(`[CONTEXT_ERROR] Failed to delete evaluation record ID ${id}:`, error);
 
     toast({
-      title: "Error al Eliminar Registro",
-      description: `No se pudo eliminar completamente. Error: ${error.message || 'Desconocido'}`,
+      title: "Error al eliminar",
+      description: `No se pudo eliminar. Error: ${error.message || "Desconocido"}`,
       variant: "destructive",
       duration: 10000,
     });
 
     return {
       success: false,
-      message: error.message || 'Error al eliminar el registro completo.',
+      message: error.message || "Error al eliminar la evaluación.",
     };
   }
 }, [currentPage, fetchRecordsByPage, toast]);

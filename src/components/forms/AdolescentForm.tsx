@@ -1,4 +1,4 @@
-
+//Adolescentes / joven 
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -213,10 +213,13 @@ export default function AdolescentForm() {
 
     if (result.success) {
         toast({
-          title: "Formulario Enviado",
-          description: "Los datos del adolescente han sido procesados y registrados.",
+        title: "Formulario de adolescentes enviado",
+        description: "Ahora continuará con el formulario PAR-Q.",
         });
-        setShowResultsDialog(true);
+
+        setIsLoading(false);
+        router.push("/par-q-form?regComplete=1");
+        return;
     } else {
         toast({
             title: "Error al Guardar",
@@ -306,30 +309,43 @@ export default function AdolescentForm() {
                 </Button>
             </form>
             </Form>
-            {results && (
-            <AlertDialog open={showResultsDialog} onOpenChange={setShowResultsDialog}>
-                <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Resultados del Cuestionario</AlertDialogTitle>
-                    <AlertDialogDescription>
-                    Puntaje Obtenido: {results.score}
-                    <br />
-                    Clasificación: <span className="font-semibold text-primary">{results.classification}</span>
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogAction onClick={() => {
-                    setShowResultsDialog(false);
-                    form.reset();
-                    setInitialData(null);
-                    router.push('/register-data?regComplete=0');
-                    }}>
-                    Entendido y Nuevo Registro
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-            )}
+           {results && (
+                <AlertDialog open={showResultsDialog} onOpenChange={setShowResultsDialog}>
+                    <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Resultados del PAQ-A</AlertDialogTitle>
+
+                        <AlertDialogDescription>
+                        <span className="block">
+                            Puntaje Obtenido: {results.score}
+                        </span>
+
+                        <span className="block">
+                            Clasificación:{" "}
+                            <span className="font-semibold text-primary">
+                            {results.classification}
+                            </span>
+                        </span>
+
+                        <span className="block mt-3 font-medium text-foreground">
+                            Debe continuar con el Formulario PAR-Q.
+                        </span>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    <AlertDialogFooter>
+                        <AlertDialogAction
+                        onClick={() => {
+                            setShowResultsDialog(false);
+                            router.push("/par-q-form?regComplete=1");
+                        }}
+                        >
+                        Continuar al Formulario PAR-Q
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+                )}
         </CardContent>
         </Card>
     );
