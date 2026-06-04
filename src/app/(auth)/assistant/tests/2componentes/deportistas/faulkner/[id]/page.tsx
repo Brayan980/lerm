@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
 import { useEvaluationContext } from "@/contexts/EvaluationContext";
+import { useAuth } from "@/contexts/AuthContext";
 import type { EvaluationRecord, TestResults, GenericMeasure, MGDeportistasFaulknerResults } from "@/lib/types";
 import { DEPORTISTAS_FAULKNER_SECTIONS } from "@/lib/types";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -67,7 +68,14 @@ export default function DeportistasTestPage() {
   const { id: evaluationId } = useParams() as { id: string };
   const router = useRouter();
   const { getEvaluationRecordById, updateEvaluationRecord } = useEvaluationContext();
+  const { selectedRole } = useAuth();
   const { toast } = useToast();
+
+  const normalizedRole = String(selectedRole || "").toLowerCase();
+  const isEvaluatorRole = normalizedRole === "evaluator" || normalizedRole === "evaluador";
+  const backRoute = isEvaluatorRole ? `/evaluations/${evaluationId}` : "/assistant/pending-tests";
+  const backLabel = isEvaluatorRole ? "Volver al detalle" : "Volver a Pruebas Pendientes";
+
   const [record, setRecord] = useState<EvaluationRecord | null | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -147,7 +155,7 @@ export default function DeportistasTestPage() {
         description: "Los datos de la prueba Deportistas han sido guardados exitosamente.",
         action: <CheckCircle className="text-green-500" />,
       });
-      router.push("/assistant/pending-tests");
+      router.push(backRoute);
     } else {
       toast({
         title: "Error al Guardar",
@@ -164,7 +172,7 @@ export default function DeportistasTestPage() {
   if (record === null) {
     return (
       <AuthWrapper allowedRoles={["Assistant", "Evaluator"]}>
-        <Card><CardHeader><CardTitle>Registro no encontrado</CardTitle></CardHeader><CardContent><Link href="/assistant/pending-tests"><ArrowLeft /> Volver</Link></CardContent></Card>
+        <Card><CardHeader><CardTitle>Registro no encontrado</CardTitle></CardHeader><CardContent><Link href={backRoute}><ArrowLeft /> {backLabel}</Link></CardContent></Card>
       </AuthWrapper>
     );
   }
@@ -174,7 +182,7 @@ export default function DeportistasTestPage() {
   return (
     <AuthWrapper allowedRoles={["Assistant", "Evaluator"]}>
       <div className="space-y-6">
-        <Button variant="outline" onClick={() => router.back()}><ArrowLeft /> Volver</Button>
+        <Button variant="outline" onClick={() => router.push(backRoute)}><ArrowLeft className="mr-2 h-4 w-4" /> {backLabel}</Button>
         
         <Card className="shadow-xl">
           <CardHeader>

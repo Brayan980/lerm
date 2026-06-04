@@ -38,7 +38,17 @@ const RenderFormData = ({ data, formType }: { data: any, formType: EvaluationRec
 
   // CASO ESPECIAL: Mostrar TAMIZAJE en detalle
   if (formType === "TAMIZAJE") {
-    const { actividadFisica, tieneEnfermedad, enfermedades, tieneSintomas, sintomas, revision, intensidad } = data;
+    const {
+      actividadFisica,
+      tieneEnfermedad,
+      enfermedades,
+      otraEnfermedad,
+      tieneSintomas,
+      sintomas,
+      otroSintoma,
+      revision,
+      intensidad,
+    } = data;
 
     return (
       <div className="space-y-3 text-sm text-foreground">
@@ -55,6 +65,12 @@ const RenderFormData = ({ data, formType }: { data: any, formType: EvaluationRec
           </div>
         )}
 
+        {otraEnfermedad && (
+          <p>
+            <strong>Otra enfermedad:</strong> {otraEnfermedad}
+          </p>
+        )}
+
         {Array.isArray(sintomas) && sintomas.length > 0 && (
           <div>
             <strong>Signos o síntomas:</strong>
@@ -62,6 +78,12 @@ const RenderFormData = ({ data, formType }: { data: any, formType: EvaluationRec
               {sintomas.map((s: string) => <li key={s}>{s}</li>)}
             </ul>
           </div>
+        )}
+
+        {otroSintoma && (
+          <p>
+            <strong>Otro signo o síntoma:</strong> {otroSintoma}
+          </p>
         )}
 
         {(revision || intensidad) && (
@@ -265,6 +287,8 @@ export default function EvaluationDetailPage() {
   const [record, setRecord] = useState<EvaluationRecord | null | undefined>(undefined);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showNoAssignedTestDialog, setShowNoAssignedTestDialog] = useState(false);
+  const [showChangeAssignedTestDialog, setShowChangeAssignedTestDialog] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isDownloadingChart, setIsDownloadingChart] = useState(false);
 
@@ -409,22 +433,58 @@ export default function EvaluationDetailPage() {
   const participantName = participant ?
     (participant.first_name && participant.last_name ? `${participant.first_name} ${participant.last_name}` : (participant.first_name || participant.last_name || "Participante Desconocido"))
     : "Cargando...";
+  const evaluationModeLabels: Record<string, string> = {
+    "2C_Slaughter": "2 Componentes - Fórmula Slaughter",
+    "2C_DurninWomersley": "2 Componentes - Fórmula Durnin - Womersley",
+    "2C_Faulkner": "2 Componentes - Fórmula Faulkner",
+    "2C_Carter": "2 Componentes - Fórmula Carter",
+    "2C_Weltman": "2 Componentes - Weltman",
+    "MULT_Express": "Multicomponente - Express",
+    "MULT_Restringido": "Multicomponente - Restringido",
+    "MULT_5Componentes": "Multicomponente - 5 Componentes",
+    "MULT_Completo": "Multicomponente - Completo",
+  };
+
+  const getEvaluationModeLabel = (record: EvaluationRecord) => {
+    const mode = String(record.evaluation_mode || "");
+
+    if (mode && evaluationModeLabels[mode]) {
+      return evaluationModeLabels[mode];
+    }
+
+    return record.evaluation_mode || "";
+  };
+
+  const getFormTypeLabel = (formType?: EvaluationRecord['form_type']) => {
+    const labels: Record<string, string> = {
+      "TAMIZAJE": "Tamizaje Preparticipativo",
+      "PAR-Q": "PAR-Q",
+      "PAQ-C": "PAQ-C",
+      "PAQ-A": "PAQ-A",
+      "IPAQ": "IPAQ",
+    };
+
+    return labels[String(formType || "")] || String(formType || "Sin test registrado");
+  };
+
   const getTestRoute = (record: EvaluationRecord) => {
-    const mode = String(record.evaluation_mode || "").toLowerCase();
+    const mode = String(record.evaluation_mode || "");
 
-    if (mode.includes("completo")) {
-      return `/assistant/tests/completo/${record.id}`;
-    }
+    const routes: Record<string, string> = {
+      "2C_Slaughter": `/assistant/tests/2componentes/ninos/${record.id}`,
+      "2C_DurninWomersley": `/assistant/tests/2componentes/adultos/${record.id}`,
+      "2C_Faulkner": `/assistant/tests/2componentes/deportistas/faulkner/${record.id}`,
+      "2C_Carter": `/assistant/tests/2componentes/deportistas/carter/${record.id}`,
+      "2C_Weltman": `/assistant/tests/2componentes/obesos/${record.id}`,
+      "MULT_Express": `/assistant/tests/express/${record.id}`,
+      "MULT_Restringido": `/assistant/tests/restringido/${record.id}`,
+      "MULT_5Componentes": `/assistant/tests/5componentes/${record.id}`,
+      "MULT_Completo": `/assistant/tests/completo/${record.id}`,
+    };
 
-    if (mode.includes("express")) {
-      return `/assistant/tests/express/${record.id}`;
-    }
-
-    if (mode.includes("slaughter")) {
-      return `/assistant/tests/2componentes/${record.id}`;
-    }
-
-    return `/assistant/tests/completo/${record.id}`;
+    // Mantiene la función original del botón:
+    // si no encuentra una ruta específica, envía al test completo.
+    return routes[mode] || `/assistant/tests/completo/${record.id}`;
   };
 
 
@@ -451,6 +511,12 @@ export default function EvaluationDetailPage() {
 
   const submissionDateObject = record.submission_date ? new Date(record.submission_date) : null;
   const participantDobObject = participant?.dob ? new Date(participant.dob) : null;
+  const testRoute = getTestRoute(record);
+  const completeTestRoute = `/assistant/tests/completo/${record.id}`;
+  const assignTestRoute = `/evaluations/${record.id}/assign`;
+  const hasAssignedTest = Boolean(String(record.evaluation_mode || "").trim());
+  const tipoPruebaLabel = getEvaluationModeLabel(record);
+  const testRealizadoLabel = getFormTypeLabel(record.form_type);
 
   const calculatedMacroindices = record.test_results?.calculatedIndices || record.test_results?.macroindices?.calculatedIndices;
   const zScoreProfile = calculatedMacroindices?.zScoreProfile;
@@ -486,119 +552,214 @@ export default function EvaluationDetailPage() {
 
 
 
-  return (
-    <AuthWrapper allowedRoles={["Evaluator", "Assistant"]}>
-      <div className="space-y-6">
-        <div className="flex items-center gap-3 mb-6 print:hidden">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => router.push("/evaluations")}
-          className="border-pink-500 text-pink-500 hover:bg-pink-50"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Volver
-        </Button>
+    return (
+      <AuthWrapper allowedRoles={["Evaluator", "Assistant"]}>
+        <div className="mx-auto -mt-6 w-full max-w-[1700px] space-y-3 px-3 pt-0 pb-8 sm:-mt-8 sm:px-4 lg:-mt-10">
+        {/* Encabezado compacto: Volver, detalles y test realizado en la misma fila */}
+        <div className="-mx-3 border-b border-border/70 bg-background px-3 pt-3 pb-2 shadow-sm sm:-mx-4 sm:px-4 print:mx-0 print:bg-background print:px-0 print:shadow-none">
+          <div className="grid grid-cols-1 gap-2 xl:grid-cols-[220px_minmax(0,1fr)_380px] xl:items-center">
+            <div className="print:hidden">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.push("/evaluations")}
+                className="h-10 w-full rounded-xl border-pink-500 px-5 text-base font-semibold text-pink-600 hover:bg-pink-50 xl:w-auto xl:min-w-[135px]"
+              >
+                <ArrowLeft className="mr-2 h-5 w-5" />
+                Volver
+              </Button>
+            </div>
 
-        {record && (
-          <Button
-            type="button"
-            variant="default"
-            asChild
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
-          >
-            <Link href={getTestRoute(record)}>
-              <PlayCircle className="mr-2 h-4 w-4" />
-              Ir al Test
-            </Link>
-          </Button>
-        )}
-      </div>
-
-        <Card className="shadow-xl" id="evaluationDetailCard">
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
-              <div>
-                <CardTitle className="text-2xl font-headline text-primary">
-                  Detalles de Evaluación: {participantName}
-                </CardTitle>
-                <CardDescription>ID de Registro: {record.id} <span className="ml-2 text-xs text-muted-foreground">(Estado: {record.status})</span></CardDescription>
-                <CardDescription>Tipo de prueba: {record.evaluation_mode}</CardDescription>
-
-              </div>
-              <div className="flex gap-2 mt-2 sm:mt-0 print:hidden">
-                <Button variant="outline" size="sm" onClick={() => setShowDeleteConfirm(true)} disabled={isDeleting || isGeneratingPdf} className="text-destructive border-destructive hover:bg-destructive/10">
-                  {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1 h-4 w-4" />}
-                  Eliminar
-                </Button>
-
-                <Button variant="default" size="sm" onClick={async () => generarReporte(
-                  record, {
-                  perfilZRef: phantomZScoreTableRef.current,
-                  kerrChartRef: kerrBodyCompChartRef.current,
-                  somatochartRef: somatochartRef.current
-                }
-                )}
-                  disabled={isGeneratingPdf}>
-                  {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-1 h-4 w-4" />}
-                  Descargar Reporte (PDF)
-                </Button>
-
-                {/* onClick={handleDownloadPdfWithCharts} */}
-                <Button variant="default" size="sm" onClick={async () => generarReporteExcel(
-                  record, {
-                  perfilZRef: phantomZScoreTableRef.current,
-                  kerrChartRef: kerrBodyCompChartRef.current,
-                  somatochartRef: somatochartRef.current
-                }
-                )}
-                  disabled={isGeneratingPdf}>
-                  {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-1 h-4 w-4" />}
-                  Descargar Reporte (Excel)
-                </Button>
-
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={async () => await enviarReportePorCorreo(record)}
-                  disabled={isGeneratingPdf}
-                >
-                  {isGeneratingPdf ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="mr-1 h-4 w-4" /> // Usa el ícono que prefieras
-                  )}
-                  Enviar por Correo
-                </Button>
-
-
+            <div className="space-y-1">
+              <CardTitle className="text-2xl font-headline leading-tight text-primary sm:text-3xl">
+                Detalles de Evaluación: {participantName}
+              </CardTitle>
+              <div className="flex flex-wrap gap-2 text-sm">
+                <span className="inline-flex items-center rounded-full border bg-background px-3 py-0.5 text-muted-foreground">
+                  ID de Registro: <span className="ml-1 font-medium text-foreground">{record.id}</span>
+                </span>
+                <span className="inline-flex items-center rounded-full border bg-background px-3 py-0.5 text-muted-foreground">
+                  Estado: <span className="ml-1 font-medium text-foreground">{record.status || "Sin estado"}</span>
+                </span>
               </div>
             </div>
-          </CardHeader>
 
-          <CardContent className="space-y-6 divide-y divide-border">
-            <section className="pt-4" id="participantInfoSection">
-              <h3 className="text-lg font-semibold text-foreground mb-2">Información del Participante</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                <p><strong className="text-foreground">Nombre Completo:</strong> {participantName}</p>
-                <p><strong className="text-foreground">Identificación:</strong> {participant?.id_number || 'N/A'}</p>
-                <p><strong className="text-foreground">Fecha de Nacimiento:</strong> {participantDobObject && isValid(participantDobObject) ? format(participantDobObject, "PPP", { locale: es }) : 'N/A'} (Edad: {typeof participant?.calculated_age === 'number' ? participant.calculated_age.toFixed(1) : 'N/A'})</p>
-                <p><strong className="text-foreground">Sexo:</strong> {participant?.sex || 'N/A'}</p>
-                <p><strong className="text-foreground">Correo:</strong> {participant?.email || 'N/A'}</p>
-                <p><strong className="text-foreground">Términos Aceptados:</strong> {record.accepted_terms ? 'Sí' : 'No'}</p>
+            <div className="rounded-xl border bg-background/90 px-4 py-2 shadow-sm xl:justify-self-stretch">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Test realizado</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">{testRealizadoLabel}</p>
+            </div>
+          </div>
+        </div>
+
+        <Card className="overflow-hidden rounded-2xl border-border/60 shadow-md" id="evaluationDetailCard">
+          <CardContent className="px-4 pt-3 pb-5 sm:px-5">
+            <div className="grid grid-cols-1 gap-3 2xl:grid-cols-[280px_minmax(0,1fr)_320px] xl:grid-cols-[260px_minmax(0,1fr)]">
+              <aside className="print:hidden">
+                <div className="space-y-4">
+                  <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
+                    <div className="border-b bg-muted/30 px-5 py-4">
+                      <p className="text-lg font-semibold text-foreground">Menú</p>
+                      <p className="text-sm text-muted-foreground">Acciones del reporte</p>
+                    </div>
+
+                    <div className="space-y-3 p-4">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={async () => generarReporte(
+                          record,
+                          {
+                            perfilZRef: phantomZScoreTableRef.current,
+                            kerrChartRef: kerrBodyCompChartRef.current,
+                            somatochartRef: somatochartRef.current
+                          }
+                        )}
+                        disabled={isGeneratingPdf}
+                        className="h-12 w-full justify-start rounded-2xl px-4"
+                      >
+                        {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                        Descargar PDF
+                      </Button>
+
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={async () => generarReporteExcel(
+                          record,
+                          {
+                            perfilZRef: phantomZScoreTableRef.current,
+                            kerrChartRef: kerrBodyCompChartRef.current,
+                            somatochartRef: somatochartRef.current
+                          }
+                        )}
+                        disabled={isGeneratingPdf}
+                        className="h-12 w-full justify-start rounded-2xl px-4"
+                      >
+                        {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                        Descargar Excel
+                      </Button>
+
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={async () => await enviarReportePorCorreo(record)}
+                        disabled={isGeneratingPdf}
+                        className="h-12 w-full justify-start rounded-2xl px-4"
+                      >
+                        {isGeneratingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                        Enviar por Correo
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl border bg-muted/20 p-4 shadow-sm">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Información rápida</p>
+                    <div className="mt-3 space-y-3 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Participante</p>
+                        <p className="font-semibold text-foreground">{participantName}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Estado</p>
+                        <p className="font-semibold text-foreground">{record.status || "Sin estado"}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Test realizado</p>
+                        <p className="font-semibold text-foreground">{testRealizadoLabel}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    disabled={isDeleting || isGeneratingPdf}
+                    className="h-12 w-full justify-start rounded-2xl border-destructive px-4 text-destructive hover:bg-destructive/10"
+                  >
+                    {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                    Eliminar evaluación
+                  </Button>
+                </div>
+              </aside>
+
+              <main className="space-y-3">
+                <section id="participantInfoSection" className="rounded-2xl border bg-muted/20 p-4 shadow-sm">
+              <div className="mb-4 flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-semibold text-foreground">Información del Participante</h3>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <div className="rounded-xl border bg-background p-4 shadow-sm">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Nombre completo</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">{participantName}</p>
+                </div>
+                <div className="rounded-xl border bg-background p-4 shadow-sm">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Identificación</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">{participant?.id_number || 'N/A'}</p>
+                </div>
+                <div className="rounded-xl border bg-background p-4 shadow-sm">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Sexo</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">{participant?.sex || 'N/A'}</p>
+                </div>
+                <div className="rounded-xl border bg-background p-4 shadow-sm">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Fecha de nacimiento</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">{participantDobObject && isValid(participantDobObject) ? format(participantDobObject, "PPP", { locale: es }) : 'N/A'}</p>
+                </div>
+                <div className="rounded-xl border bg-background p-4 shadow-sm">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Edad</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">{typeof participant?.calculated_age === 'number' ? participant.calculated_age.toFixed(1) : 'N/A'}</p>
+                </div>
+                <div className="rounded-xl border bg-background p-4 shadow-sm">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Términos aceptados</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">{record.accepted_terms ? 'Sí' : 'No'}</p>
+                </div>
+                <div className="rounded-xl border bg-background p-4 shadow-sm md:col-span-2 xl:col-span-3">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Correo electrónico</p>
+                  <p className="mt-1 break-all text-sm font-semibold text-foreground">{participant?.email || 'N/A'}</p>
+                </div>
               </div>
             </section>
 
-            <section className="pt-4" id="formDataSection">
-              <h3 className="text-lg font-semibold text-foreground mb-2">Datos del Formulario ({record.form_type})</h3>
-              <RenderFormData data={record.form_data} formType={record.form_type} />
-              {record.paq_score !== undefined && record.paq_score !== null && <p className="mt-2 text-sm"><strong className="text-foreground">Puntaje PAQ:</strong> {record.paq_score} ({record.paq_classification})</p>}
-              {record.ipaq_met_minutes !== undefined && record.ipaq_met_minutes !== null && <p className="mt-2 text-sm"><strong className="text-foreground">IPAQ MET-min/sem:</strong> {record.ipaq_met_minutes} ({record.ipaq_classification})</p>}
-              {record.parq_requires_consultation !== undefined && record.parq_requires_consultation !== null && <p className="mt-2 text-sm"><strong className="text-foreground">PAR-Q Requiere Consulta:</strong> {record.parq_requires_consultation ? 'Sí' : 'No'}</p>}
+            <section id="formDataSection" className="rounded-2xl border bg-muted/20 p-5 shadow-sm">
+              <div className="mb-4 flex items-center gap-2">
+                <Activity className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-semibold text-foreground">Datos del Formulario ({record.form_type})</h3>
+              </div>
+
+              <div className="rounded-xl border bg-background p-4 shadow-sm">
+                <RenderFormData data={record.form_data} formType={record.form_type} />
+
+                {(record.paq_score !== undefined && record.paq_score !== null) ||
+                 (record.ipaq_met_minutes !== undefined && record.ipaq_met_minutes !== null) ||
+                 (record.parq_requires_consultation !== undefined && record.parq_requires_consultation !== null) ? (
+                  <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    {record.paq_score !== undefined && record.paq_score !== null && (
+                      <div className="rounded-lg border bg-muted/20 p-3">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Puntaje PAQ</p>
+                        <p className="mt-1 text-sm font-semibold text-foreground">{record.paq_score} <span className="font-normal text-muted-foreground">({record.paq_classification})</span></p>
+                      </div>
+                    )}
+                    {record.ipaq_met_minutes !== undefined && record.ipaq_met_minutes !== null && (
+                      <div className="rounded-lg border bg-muted/20 p-3">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">IPAQ MET-min/sem</p>
+                        <p className="mt-1 text-sm font-semibold text-foreground">{record.ipaq_met_minutes} <span className="font-normal text-muted-foreground">({record.ipaq_classification})</span></p>
+                      </div>
+                    )}
+                    {record.parq_requires_consultation !== undefined && record.parq_requires_consultation !== null && (
+                      <div className="rounded-lg border bg-muted/20 p-3">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">PAR-Q Requiere Consulta</p>
+                        <p className="mt-1 text-sm font-semibold text-foreground">{record.parq_requires_consultation ? 'Sí' : 'No'}</p>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+              </div>
             </section>
 
             {calculatedMacroindices && (
-              <section className="pt-4" id="macroindicesResultsSection">
+              <section className="pt-2" id="macroindicesResultsSection">
                 <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center">
                   <Calculator className="mr-2 h-5 w-5 text-primary" />
                   Resultados Calculados de Macroíndices
@@ -611,7 +772,7 @@ export default function EvaluationDetailPage() {
             )}
 
             {zScoreProfile && zScoreProfile.length > 0 && (
-              <section className="pt-6" id="phantomZScoreTableSectionContainer">
+              <section className="pt-3" id="phantomZScoreTableSectionContainer">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
                   {/* TABLA DE PERFIL Z - MITAD IZQUIERDA */}
@@ -772,7 +933,7 @@ export default function EvaluationDetailPage() {
             )}
 
             {calculatedSomatotypeData && (
-              <section className="pt-8 space-y-6">
+              <section className="pt-4 space-y-4">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
                   {/* --- Panel de Resultados --- */}
@@ -814,14 +975,138 @@ export default function EvaluationDetailPage() {
               </section>
             )}
 
+              </main>
+
+              <aside className="print:hidden xl:col-span-2 2xl:col-span-1">
+                <div className="space-y-4">
+                  <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
+                    <div className="border-b bg-muted/30 px-5 py-5">
+                      <h3 className="text-2xl font-headline font-semibold text-foreground">Tipos de pruebas</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">Seleccione una categoría</p>
+                    </div>
+
+                    <div className="space-y-4 p-4">
+                      <Button
+                        type="button"
+                        variant="default"
+                        className="h-12 w-full justify-start rounded-2xl px-4 shadow-sm"
+                        onClick={() => {
+                          if (hasAssignedTest) {
+                            setShowChangeAssignedTestDialog(true);
+                            return;
+                          }
+
+                          router.push(assignTestRoute);
+                        }}
+                      >
+                        <PlayCircle className="mr-2 h-4 w-4" />
+                        Ir a asignar su tipo de prueba
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
+                    <div className="border-b bg-muted/30 px-5 py-5">
+                      <h3 className="text-2xl font-headline font-semibold text-foreground">Ir a realizar prueba</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">Realice la prueba que ya fue asignada.</p>
+                    </div>
+
+                    <div className="space-y-4 p-4">
+                      <div className="rounded-2xl border bg-muted/30 p-4">
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Tipo de prueba</p>
+                        <p className="mt-1 text-sm font-semibold text-foreground">
+                          {tipoPruebaLabel || "Sin prueba asignada"}
+                        </p>
+                      </div>
+
+                      <Button
+                        type="button"
+                        variant="default"
+                        className="h-12 w-full justify-start rounded-2xl px-4 shadow-sm"
+                        onClick={() => {
+                          if (!hasAssignedTest) {
+                            setShowNoAssignedTestDialog(true);
+                            return;
+                          }
+
+                          router.push(testRoute);
+                        }}
+                      >
+                        <PlayCircle className="mr-2 h-4 w-4" />
+                        Realizar prueba asignada
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </aside>
+            </div>
           </CardContent>
-          <CardFooter className="pt-6">
+          <CardFooter className="border-t bg-muted/20 px-5 py-3">
             <p className="text-xs text-muted-foreground">
               Enviado el: {submissionDateObject && isValid(submissionDateObject) ? format(submissionDateObject, "PPPp", { locale: es }) : 'Fecha no disponible'}
               {record.assistant_notes && <span className="block mt-1">Última nota del asistente: {record.assistant_notes}</span>}
             </p>
           </CardFooter>
         </Card>
+
+        <AlertDialog open={showChangeAssignedTestDialog} onOpenChange={setShowChangeAssignedTestDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Ya tiene prueba asignada</AlertDialogTitle>
+              <AlertDialogDescription>
+                Este participante ya tiene una prueba asignada. ¿Desea cambiarla?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
+            <AlertDialogFooter className="gap-2 sm:gap-2">
+              <AlertDialogCancel onClick={() => setShowChangeAssignedTestDialog(false)}>
+                Cancelar
+              </AlertDialogCancel>
+
+              <AlertDialogAction
+                type="button"
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={() => router.push(assignTestRoute)}
+              >
+                Listo
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={showNoAssignedTestDialog} onOpenChange={setShowNoAssignedTestDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>No hay prueba asignada</AlertDialogTitle>
+              <AlertDialogDescription>
+                Este participante todavía no tiene un tipo de prueba asignado.
+                Puede continuar directamente con la prueba completa o ir primero a asignar una prueba específica.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
+            <AlertDialogFooter className="gap-2 sm:gap-2">
+              <AlertDialogCancel onClick={() => setShowNoAssignedTestDialog(false)}>
+                Cancelar
+              </AlertDialogCancel>
+
+              <AlertDialogAction
+                type="button"
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={() => router.push(completeTestRoute)}
+              >
+                Listo
+              </AlertDialogAction>
+
+              <AlertDialogAction
+                type="button"
+                className="bg-slate-900 text-white hover:bg-slate-800"
+                onClick={() => router.push(assignTestRoute)}
+              >
+                Ir a asignar prueba
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
           <AlertDialogContent>

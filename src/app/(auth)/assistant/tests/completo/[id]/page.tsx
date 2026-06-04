@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useEvaluationContext } from "@/contexts/EvaluationContext";
+import { useAuth } from "@/contexts/AuthContext";
 import type { EvaluationRecord, TestResults, AssignedTests, GenericMeasure, CompletoResults } from "@/lib/types";
 import { COMPLETO_SECTIONS, Ethnicity } from "@/lib/types";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -212,7 +213,13 @@ export default function CompletoTestPage() {
   const router = useRouter();
   const evaluationDetailUrl = `/evaluations/${evaluationId}`;
   const { getEvaluationRecordById, updateEvaluationRecord } = useEvaluationContext();
+  const { selectedRole } = useAuth();
   const { toast } = useToast();
+
+  const normalizedRole = String(selectedRole || "").toLowerCase();
+  const isEvaluatorRole = normalizedRole === "evaluator" || normalizedRole === "evaluador";
+  const backRoute = isEvaluatorRole ? evaluationDetailUrl : "/assistant/pending-tests";
+  const backLabel = isEvaluatorRole ? "Volver al detalle" : "Volver a Pruebas Pendientes";
   const [record, setRecord] = useState<EvaluationRecord | null | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -349,8 +356,8 @@ export default function CompletoTestPage() {
           <CardHeader><CardTitle>Registro no Encontrado</CardTitle></CardHeader>
           <CardContent>
             <p>No se pudo encontrar la evaluación.</p>
-            <Button variant="outline" size="sm" onClick={() => router.push(evaluationDetailUrl)} className="mb-4">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Volver
+            <Button variant="outline" size="sm" onClick={() => router.push(backRoute)} className="mb-4">
+              <ArrowLeft className="mr-2 h-4 w-4" /> {backLabel}
             </Button>
           </CardContent>
         </Card>
@@ -363,8 +370,8 @@ export default function CompletoTestPage() {
   return (
     <AuthWrapper allowedRoles={["Assistant", "Evaluator"]}>
       <div className="space-y-6">
-        <Button variant="outline" size="sm" onClick={() => router.push(evaluationDetailUrl)} className="mb-4">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Volver
+        <Button variant="outline" size="sm" onClick={() => router.push(backRoute)} className="mb-4">
+          <ArrowLeft className="mr-2 h-4 w-4" /> {backLabel}
         </Button>
 
         <Card className="shadow-xl">

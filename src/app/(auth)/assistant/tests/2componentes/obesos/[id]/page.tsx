@@ -409,6 +409,7 @@ import {
 } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
 import { useEvaluationContext } from "@/contexts/EvaluationContext";
+import { useAuth } from "@/contexts/AuthContext";
 import type {
   EvaluationRecord,
   TestResults,
@@ -476,6 +477,20 @@ export default function ObesosTestPage() {
   const { getEvaluationRecordById, updateEvaluationRecord } =
     useEvaluationContext();
   const { toast } = useToast();
+  const { selectedRole } = useAuth();
+
+  const normalizedRole = String(selectedRole || "").toLowerCase();
+  const isEvaluatorRole =
+    normalizedRole === "evaluator" || normalizedRole === "evaluador";
+
+  const backRoute = isEvaluatorRole
+    ? `/evaluations/${evaluationId}`
+    : "/assistant/pending-tests";
+
+  const backLabel = isEvaluatorRole
+    ? "Volver al detalle"
+    : "Volver a Pruebas Pendientes";
+
   const [record, setRecord] = useState<EvaluationRecord | null | undefined>(
     undefined
   );
@@ -590,9 +605,9 @@ export default function ObesosTestPage() {
           <CardContent>
             <p>No se pudo encontrar la evaluación.</p>
             <Button variant="outline" asChild className="mt-4">
-              <Link href="/assistant/pending-tests">
+              <Link href={backRoute}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Volver a Pruebas Pendientes
+                {backLabel}
               </Link>
             </Button>
           </CardContent>
@@ -609,10 +624,10 @@ export default function ObesosTestPage() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => router.push("/assistant/pending-tests")}
+          onClick={() => router.push(backRoute)}
           className="mb-4"
         >
-          <ArrowLeft className="mr-2 h-4 w-4" /> Volver a Pruebas Pendientes
+          <ArrowLeft className="mr-2 h-4 w-4" /> {backLabel}
         </Button>
 
         <Card className="shadow-xl">

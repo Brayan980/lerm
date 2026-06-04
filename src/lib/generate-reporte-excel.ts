@@ -12,78 +12,75 @@ export async function generarReporteExcel(
 ) {
   const wb = new ExcelJS.Workbook();
 
+  const participantData = record?.participantData ?? {};
+  const formData = record?.form_data ?? {};
+  const macro = record?.test_results?.calculatedIndices;
+  const comp = record?.test_results?.calculatedComposicion;
+  const somato = record?.test_results?.calculatedSomatotype;
+
+  const formatNumber = (value: any, decimals = 2) => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num.toFixed(decimals) : "N/A";
+  };
+
   // ================================
   // 1. INFORMACIÓN DEL PARTICIPANTE
   // ================================
   const wsInfo = wb.addWorksheet("Información Personal");
 
-  // Variable let para construir la data dinámicamente
-let participantInfoData: (string | number | null)[][] = [];
+  let participantInfoData: (string | number | null)[][] = [];
 
-// === FUNCIÓN AUXILIAR ===
-// Para agregar una fila al arreglo solo si el valor existe (no es null, undefined, o string vacío)
-const addRowIfValueExists = (label: string, value: string | number | null | undefined): void => {
-    // Verificamos que el valor no sea null, undefined, ni una cadena vacía
+  const addRowIfValueExists = (
+    label: string,
+    value: string | number | null | undefined
+  ): void => {
     if (value !== null && value !== undefined && value !== "") {
-        // Si el valor es un número, lo convertimos a string para ser consistente si es necesario, 
-        // pero para hojas de cálculo a menudo no es necesario, lo dejamos como está.
-        participantInfoData.push([label, value]);
+      participantInfoData.push([label, value]);
     }
-};
+  };
 
-// === INFORMACIÓN DEL PARTICIPANTE ===
-participantInfoData.push(["INFORMACIÓN DEL PARTICIPANTE"]);
+  participantInfoData.push(["INFORMACIÓN DEL PARTICIPANTE"]);
 
-// 1. Nombre Completo
-const fullName = `${record.participantData.first_name || ''} ${record.participantData.last_name || ''}`.trim();
-addRowIfValueExists("Nombre", fullName);
+  const fullName = `${participantData.first_name || ""} ${
+    participantData.last_name || ""
+  }`.trim();
 
-// 2. Edad (redondeada a 1 decimal)
-const age = record.participantData.calculated_age?.toFixed(1);
-addRowIfValueExists("Edad", age);
+  addRowIfValueExists("Nombre", fullName);
+  addRowIfValueExists("Edad", formatNumber(participantData.calculated_age, 1));
+  addRowIfValueExists("Sexo", participantData.sex);
+  addRowIfValueExists("ID", participantData.id_number);
 
-// 3. Sexo
-addRowIfValueExists("Sexo", record.participantData.sex);
+  participantInfoData.push([]);
 
-// 4. ID
-addRowIfValueExists("ID", record.participantData.id_number);
-
-// Fila vacía de separación, esta siempre se agrega para mantener la estructura
-participantInfoData.push([]);
-
-// === ACTIVIDAD FÍSICA (Solo se añaden si los datos existen) ===
-// Agregamos el encabezado de la sección si hay datos de PAQ/IPAQ
-if (record.paq_score || record.paq_classification || record.ipaq_met_minutes || record.ipaq_classification || record.parq_requires_consultation !== undefined) {
+  if (
+    record?.paq_score ||
+    record?.paq_classification ||
+    record?.ipaq_met_minutes ||
+    record?.ipaq_classification ||
+    record?.parq_requires_consultation !== undefined
+  ) {
     participantInfoData.push(["ACTIVIDAD FÍSICA"]);
-}
+  }
 
-// 5. PAQ MET-min/sem
-addRowIfValueExists("PAQ MET-min/sem", record.paq_score);
+  addRowIfValueExists("PAQ MET-min/sem", record?.paq_score);
+  addRowIfValueExists("Estado PAQ", record?.paq_classification);
+  addRowIfValueExists("IPAQ MET-min/sem", record?.ipaq_met_minutes);
+  addRowIfValueExists("Estado IPAQ", record?.ipaq_classification);
 
-// 6. Estado PAQ
-addRowIfValueExists("Estado PAQ", record.paq_classification);
-
-// 7. IPAQ MET-min/sem
-addRowIfValueExists("IPAQ MET-min/sem", record.ipaq_met_minutes);
-
-// 8. Estado IPAQ
-addRowIfValueExists("Estado IPAQ", record.ipaq_classification);
-
-// 9. PAR-Q
-if (record.parq_requires_consultation !== undefined && record.parq_requires_consultation !== null) {
-    const parqValue = `Requiere consulta?: ${record.parq_requires_consultation ? "Si" : "No"}`;
+  if (
+    record?.parq_requires_consultation !== undefined &&
+    record?.parq_requires_consultation !== null
+  ) {
+    const parqValue = `Requiere consulta?: ${
+      record.parq_requires_consultation ? "Sí" : "No"
+    }`;
     participantInfoData.push(["PAR-Q", parqValue]);
-}
+  }
 
-// === TAMIZAJE ===
-// 10. Tamizaje: Revisión médica previa
-addRowIfValueExists("Tamizaje: Revisión médica previa", record.form_data?.revision);
+  addRowIfValueExists("Tamizaje: Revisión médica previa", formData?.revision);
+  addRowIfValueExists("Tamizaje: Intensidad sugerida", formData?.intensidad);
 
-// 11. Tamizaje: Intensidad sugerida
-addRowIfValueExists("Tamizaje: Intensidad sugerida", record.form_data?.intensidad);
-
-// Finalmente, agregamos todas las filas construidas dinámicamente
-wsInfo.addRows(participantInfoData);
+  wsInfo.addRows(participantInfoData);
 
   // ================================
   // 2. MACROÍNDICES
@@ -91,77 +88,109 @@ wsInfo.addRows(participantInfoData);
   const wsMacro = wb.addWorksheet("Macroíndices");
   wsMacro.addRow(["Macroíndice", "Valor", "Clasificación"]);
 
-  const macro = record.test_results?.calculatedIndices;
+  let macroData: (string | number)[][] = [
+    [
+      "IMC",
+      formatNumber(macro?.imc?.value),
+      macro?.imc?.classification || "",
+    ],
+    ["ICC", formatNumber(macro?.icc?.value), ""],
+    ["ICE", formatNumber(macro?.ice), ""],
+    ["IDGC", formatNumber(macro?.idgc), ""],
+    ["IC Conicidad", formatNumber(macro?.icConicidad), ""],
+    ["Índice de Röher", formatNumber(macro?.roher?.value), ""],
+    ["Índice de Livi", formatNumber(macro?.livi), ""],
+    [
+      "Pignet",
+      formatNumber(macro?.pignet?.value),
+      macro?.pignet?.classification || "",
+    ],
+    [
+      "IAI",
+      formatNumber(macro?.iai?.value),
+      macro?.iai?.classification || "",
+    ],
+    [
+      "IB",
+      formatNumber(macro?.ibBraquial?.value),
+      macro?.ibBraquial?.classification || "",
+    ],
+    [
+      "LRMS",
+      formatNumber(macro?.lrms?.value),
+      macro?.lrms?.classification || "",
+    ],
+    [
+      "LRMI",
+      formatNumber(macro?.lrmi?.value),
+      macro?.lrmi?.classification || "",
+    ],
+  ];
 
-  let macroData = [
-    ["IMC", macro?.imc?.value?.toFixed(2) || "N/A", macro?.imc?.classification || ""],
-    ["ICC", macro?.icc?.value?.toFixed(2) || "N/A", ""],
-    ["ICE", macro?.ice?.toFixed(2) || "N/A", ""],
-    ["IDGC", macro?.idgc?.toFixed(2) || "N/A", ""],
-    ["IC Conicidad", macro?.icConicidad?.toFixed(2) || "N/A", ""],
-    ["Índice de Röher", macro?.roher?.value?.toFixed(2) || "N/A", ""],
-    ["Índice de Livi", macro?.livi?.toFixed(2) || "N/A", ""],
-    ["Pignet", macro?.pignet?.value?.toFixed(2) || "N/A", macro?.pignet?.classification || ""],
-    ["IAI", macro?.iai?.value?.toFixed(2) || "N/A", macro?.iai?.classification || ""],
-    ["IB", macro?.ibBraquial?.value?.toFixed(2) || "N/A", macro?.ibBraquial?.classification || ""],
-    ["LRMS", macro?.lrms?.value?.toFixed(2) || "N/A", macro?.lrms?.classification || ""],
-    ["LRMI", macro?.lrmi?.value?.toFixed(2) || "N/A", macro?.lrmi?.classification || ""],
-  ]
+  const macroDataExtra: (string | number)[][] = [
+    ["Índice de maduración", macro?.indiceMaduracion ?? "N/A", ""],
+    ["Edad PHV (años)", macro?.edadPhv ?? "N/A", ""],
+    ["CLAS", macro?.clasMaduracion ?? "N/A", ""],
+    ["Falta de crecimiento (cm)", macro?.faltaCm ?? "N/A", ""],
+    ["Estatura adulta estimada (cm)", macro?.estaturaAdultaEst ?? "N/A", ""],
+    [
+      "Edad estimada de la talla adulta",
+      macro?.edadEstimadaTallaAdulta ?? "N/A",
+      "",
+    ],
+  ];
 
+  const evaluationMode = record?.evaluation_mode as EvaluationMode | undefined;
+  const age = Number(participantData?.calculated_age);
 
-  const macroDataExtra = [
-    //Solo si es menor de 18 años
-    ["Índice de maduracion", macro.indiceMaduracion, ""],
-    ["Edad PHV (años)", macro.edadPhv, ""],
-    ["CLAS", macro.clasMaduracion, ""],
-    ["Falta de crecimiento (cm)", macro.faltaCm, ""],
-    ["Estatura adulta estimada (cm)", macro.estaturaAdultaEst, ""],
-    ["Edad estimada de la talla adulta", macro.edadEstimadaTallaAdulta, ""]
-  ]
-
-  const evaluation_mode: EvaluationMode = record.evaluation_mode
-
-  if (record.participantData.calculated_age < 18 && evaluation_mode.startsWith("MULT") && evaluation_mode != "MULT_Express") {
-    macroData = [...macroData, ...macroDataExtra]
+  if (
+    Number.isFinite(age) &&
+    age < 18 &&
+    evaluationMode?.startsWith("MULT") &&
+    evaluationMode !== "MULT_Express"
+  ) {
+    macroData = [...macroData, ...macroDataExtra];
   }
 
-  // console.log(macroData)
-
   wsMacro.addRows(macroData);
-
 
   // ================================
   // 3. COMPOSICIÓN CORPORAL + GRÁFICO KERR
   // ================================
   const wsComp = wb.addWorksheet("Composición Corporal");
-  const comp = record.test_results?.calculatedComposicion;
+
   wsComp.addRow(["Componente", "Masa (kg)", "Porcentaje"]);
   wsComp.addRows([
-    ["Masa Grasa", comp?.masaGrasaKg?.toFixed(2) || "N/A", ""],
-    ["Masa Ósea", comp?.masaOseaKg?.toFixed(2) || "N/A", ""],
-    ["Masa Muscular Esquelética", comp?.masaMuscularEsqueleticaKg?.toFixed(2) || "N/A", ""],
+    ["Masa Grasa", formatNumber(comp?.masaGrasaKg), ""],
+    ["Masa Ósea", formatNumber(comp?.masaOseaKg), ""],
+    ["Masa Muscular Esquelética", formatNumber(comp?.masaMuscularEsqueleticaKg), ""],
   ]);
 
   if (chartsRefs.kerrChartRef) {
     const canvas = await html2canvas(chartsRefs.kerrChartRef);
     const imgData = canvas.toDataURL("image/png");
     const imageId = wb.addImage({ base64: imgData, extension: "png" });
-    wsComp.addImage(imageId, { tl: { col: 0, row: 8 }, ext: { width: 500, height: 300 } });
+
+    wsComp.addImage(imageId, {
+      tl: { col: 0, row: 8 },
+      ext: { width: 500, height: 300 },
+    });
   }
 
   // ================================
   // 4. SOMATOTIPO + SOMATOCARTA
   // ================================
   const wsSomato = wb.addWorksheet("Somatotipo");
-  const somato = record.test_results?.calculatedSomatotype;
+
   wsSomato.addRows([
-    ["Endomorfia", somato?.endomorfia?.toFixed(1) || "N/A"],
-    ["Mesomorfia", somato?.mesomorfia?.toFixed(1) || "N/A"],
-    ["Ectomorfia", somato?.ectomorfia?.toFixed(1) || "N/A"],
+    ["Endomorfia", formatNumber(somato?.endomorfia, 1)],
+    ["Mesomorfia", formatNumber(somato?.mesomorfia, 1)],
+    ["Ectomorfia", formatNumber(somato?.ectomorfia, 1)],
   ]);
 
   if (chartsRefs.somatochartRef) {
     const canvas = chartsRefs.somatochartRef.querySelector("canvas");
+
     if (canvas) {
       const imgData = canvas.toDataURL("image/png");
       const imageId = wb.addImage({
@@ -170,12 +199,11 @@ wsInfo.addRows(participantInfoData);
       });
 
       wsSomato.addImage(imageId, {
-        tl: { col: 0, row: 6 },   // posición en la hoja
-        ext: { width: 400, height: 300 }, // tamaño en px
+        tl: { col: 0, row: 6 },
+        ext: { width: 400, height: 300 },
       });
     }
   }
-
 
   // ================================
   // 5. PERFIL Z EN HOJA SEPARADA
@@ -185,19 +213,28 @@ wsInfo.addRows(participantInfoData);
     const canvas = await html2canvas(chartsRefs.perfilZRef);
     const imgData = canvas.toDataURL("image/png");
     const imageId = wb.addImage({ base64: imgData, extension: "png" });
-    wsPerfil.addImage(imageId, { tl: { col: 0, row: 1 }, ext: { width: 600, height: 300 } });
+
+    wsPerfil.addImage(imageId, {
+      tl: { col: 0, row: 1 },
+      ext: { width: 600, height: 300 },
+    });
   }
 
   // ================================
   // 6. DESCARGA
   // ================================
   const buffer = await wb.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+
   const url = URL.createObjectURL(blob);
 
   const a = document.createElement("a");
   a.href = url;
-  a.download = `Reporte_${record.participantData.last_name || "LERM"}.xlsx`;
+  a.download = `Reporte_${participantData?.last_name || "LERM"}.xlsx`;
   a.click();
+
   URL.revokeObjectURL(url);
 }

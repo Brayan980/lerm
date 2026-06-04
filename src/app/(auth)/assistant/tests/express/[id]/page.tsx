@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useEvaluationContext } from "@/contexts/EvaluationContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { EvaluationRecord, TestResults, AssignedTests, ExpressResults, GenericMeasure, Ethnicity } from "@/lib/types";
 import { EXPRESS_SECTIONS } from "@/lib/types";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -112,7 +113,18 @@ export default function ExpressTestPage() {
   const { id: evaluationId } = useParams() as { id: string };
   const router = useRouter();
   const { getEvaluationRecordById, updateEvaluationRecord } = useEvaluationContext();
+  const { selectedRole } = useAuth();
   const { toast } = useToast();
+
+  const normalizedRole = String(selectedRole || "").toLowerCase();
+  const isEvaluatorRole = normalizedRole === "evaluator" || normalizedRole === "evaluador";
+  const backRoute = isEvaluatorRole
+    ? `/evaluations/${evaluationId}`
+    : "/assistant/pending-tests";
+  const backLabel = isEvaluatorRole
+    ? "Volver al detalle"
+    : "Volver a Pruebas Pendientes";
+
   const [record, setRecord] = useState<EvaluationRecord | null | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -217,7 +229,7 @@ export default function ExpressTestPage() {
           <CardContent>
             <p>No se pudo encontrar la evaluación.</p>
             <Button variant="outline" asChild className="mt-4">
-              <Link href="/assistant/pending-tests"><ArrowLeft className="mr-2 h-4 w-4" />Volver a Pruebas Pendientes</Link>
+              <Link href={backRoute}><ArrowLeft className="mr-2 h-4 w-4" />{backLabel}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -230,8 +242,8 @@ export default function ExpressTestPage() {
   return (
     <AuthWrapper allowedRoles={["Assistant", "Evaluator"]}>
       <div className="space-y-6">
-        <Button variant="outline" size="sm" onClick={() => router.push("/assistant/pending-tests")} className="mb-4">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Volver a Pruebas Pendientes
+        <Button variant="outline" size="sm" onClick={() => router.push(backRoute)} className="mb-4">
+          <ArrowLeft className="mr-2 h-4 w-4" /> {backLabel}
         </Button>
 
         <Card className="shadow-xl">

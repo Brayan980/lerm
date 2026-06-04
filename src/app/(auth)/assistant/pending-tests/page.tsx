@@ -155,7 +155,6 @@
 //     </AuthWrapper>
 //   );
 // }
-
 "use client";
 
 import AuthWrapper from "@/components/auth/AuthWrapper";
@@ -176,7 +175,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useEvaluationContext } from "@/contexts/EvaluationContext";
-import type { EvaluationRecord, EvaluationMode } from "@/lib/types";
+import type { EvaluationMode } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import {
   UserCheck,
@@ -206,20 +205,14 @@ const evaluationModeConfig: Record<
   },
   "2C_Faulkner": {
     label: "2 Componentes - Fórmula Faulkner",
-    href: (id: string) => `/assistant/tests/2componentes/deportistas/faulkner/${id}`,
+    href: (id: string) =>
+      `/assistant/tests/2componentes/deportistas/faulkner/${id}`,
   },
-  // "2C_JacksonPollock": {
-  //   label: "2 Componentes - Fórmula Jackson - Pollock",
-  //   href: (id: string) => `/assistant/tests/2componentes/f4/${id}`,
-  // },
   "2C_Carter": {
-    label: "",
-    href: (id: string) => `/assistant/tests/2componentes/deportistas/carter/${id}`,
+    label: "2 Componentes - Fórmula Carter",
+    href: (id: string) =>
+      `/assistant/tests/2componentes/deportistas/carter/${id}`,
   },
-  // "2C_Withers": {
-  //   label: "",
-  //   href: (id: string) => `/assistant/tests/2componentes/f4/${id}`,
-  // },
   "2C_Weltman": {
     label: "2 Componentes - Weltman",
     href: (id: string) => `/assistant/tests/2componentes/obesos/${id}`,
@@ -240,13 +233,12 @@ const evaluationModeConfig: Record<
     label: "Multicomponente - Completo",
     href: (id: string) => `/assistant/tests/completo/${id}`,
   },
-
 };
-
 
 export default function AssistantPendingTestsPage() {
   const router = useRouter();
   const { evaluationRecords, fetchRecords } = useEvaluationContext();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -282,30 +274,24 @@ export default function AssistantPendingTestsPage() {
   }, [evaluationRecords, searchTerm]);
 
   return (
-  <AuthWrapper allowedRoles={["Assistant", "Evaluator"]}>
-    <div className="space-y-6">
-      <div>
-        <Button
-          variant="outline"
-          onClick={() => {
-            if (window.history.length > 1) {
-              router.back();
-            } else {
-              router.push("/dashboard");
-            }
-          }}
-          className="border-pink-500 text-pink-500 hover:bg-pink-50 rounded-xl px-4 py-5 font-normal"
-        >
-          <ArrowLeft className="mr-3 h-5 w-5" />
-          Volver
-        </Button>
-      </div>
+    <AuthWrapper allowedRoles={["Assistant", "Evaluator"]}>
+      <div className="space-y-6">
+        <div>
+          <Button
+            variant="outline"
+            onClick={() => router.push("/dashboard")}
+            className="border-pink-500 text-pink-500 hover:bg-pink-50 rounded-xl px-4 py-5 font-normal"
+          >
+            <ArrowLeft className="mr-3 h-5 w-5" />
+            Volver
+          </Button>
+        </div>
 
-      <Card className="shadow-lg">
+        <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="text-3xl font-headline flex items-center">
-              <UserCheck className="mr-3 h-8 w-8 text-primary" /> Pruebas
-              Pendientes (Asistente)
+              <UserCheck className="mr-3 h-8 w-8 text-primary" />
+              Pruebas Pendientes (Asistente)
             </CardTitle>
             <CardDescription>
               Lista de participantes con protocolos asignados que requieren ser
@@ -317,7 +303,10 @@ export default function AssistantPendingTestsPage() {
         <Card className="shadow-md">
           <CardHeader>
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-              <CardTitle className="text-xl">Participantes Asignados</CardTitle>
+              <CardTitle className="text-xl">
+                Participantes Asignados
+              </CardTitle>
+
               <div className="relative w-full sm:w-auto">
                 <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -330,6 +319,7 @@ export default function AssistantPendingTestsPage() {
               </div>
             </div>
           </CardHeader>
+
           <CardContent>
             <Table>
               <TableHeader>
@@ -341,12 +331,14 @@ export default function AssistantPendingTestsPage() {
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
+
               <TableBody>
                 {filteredRecords.length > 0 ? (
                   filteredRecords.map((record) => {
                     const submissionDateObject = record.submission_date
                       ? new Date(record.submission_date)
                       : null;
+
                     const mode = record.evaluation_mode as EvaluationMode | null;
                     const modeConfig = mode ? evaluationModeConfig[mode] : null;
 
@@ -356,23 +348,34 @@ export default function AssistantPendingTestsPage() {
                           {record.participantData?.first_name}{" "}
                           {record.participantData?.last_name}
                         </TableCell>
+
                         <TableCell>{record.id}</TableCell>
+
                         <TableCell>
                           {modeConfig ? (
-                            <Badge variant="secondary">{modeConfig.label}</Badge>
+                            <Badge variant="secondary">
+                              {modeConfig.label}
+                            </Badge>
                           ) : (
                             <span className="text-xs text-muted-foreground">
                               Sin modo asignado
                             </span>
                           )}
                         </TableCell>
+
                         <TableCell>
-                          {submissionDateObject && isValid(submissionDateObject)
-                            ? format(submissionDateObject, "dd MMM yyyy, HH:mm", {
-                                locale: es,
-                              })
+                          {submissionDateObject &&
+                          isValid(submissionDateObject)
+                            ? format(
+                                submissionDateObject,
+                                "dd MMM yyyy, HH:mm",
+                                {
+                                  locale: es,
+                                }
+                              )
                             : "N/A"}
                         </TableCell>
+
                         <TableCell className="text-right space-x-2">
                           {modeConfig ? (
                             <Button
@@ -410,6 +413,7 @@ export default function AssistantPendingTestsPage() {
                 )}
               </TableBody>
             </Table>
+
             <div className="mt-6 flex justify-end">
               <Button onClick={handleRefresh} disabled={isLoading}>
                 <RefreshCw

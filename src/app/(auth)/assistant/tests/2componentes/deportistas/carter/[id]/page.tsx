@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
 import { useEvaluationContext } from "@/contexts/EvaluationContext";
+import { useAuth } from "@/contexts/AuthContext";
 import type { EvaluationRecord, TestResults, GenericMeasure, MGDeportistasFaulknerResults } from "@/lib/types";
 import { DEPORTISTAS_CARTER_SECTIONS } from "@/lib/types";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,7 +17,6 @@ import { z } from "zod";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
-import Link from "next/link";
 import { mgDeportistasCarter } from "@/lib/mgCalculations";
 
 // --- Schema genérico para cada medida ---
@@ -60,7 +60,14 @@ export default function DeportistasCarterTestPage() {
   const { id: evaluationId } = useParams() as { id: string };
   const router = useRouter();
   const { getEvaluationRecordById, updateEvaluationRecord } = useEvaluationContext();
+  const { selectedRole } = useAuth();
   const { toast } = useToast();
+
+  const normalizedRole = String(selectedRole || "").toLowerCase();
+  const isEvaluatorRole = normalizedRole === "evaluator" || normalizedRole === "evaluador";
+  const backRoute = isEvaluatorRole ? `/evaluations/${evaluationId}` : "/assistant/pending-tests";
+  const backLabel = isEvaluatorRole ? "Volver al detalle" : "Volver a Pruebas Pendientes";
+
   const [record, setRecord] = useState<EvaluationRecord | null | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -146,8 +153,8 @@ export default function DeportistasCarterTestPage() {
           <CardHeader><CardTitle>Registro no Encontrado</CardTitle></CardHeader>
           <CardContent>
             <p>No se pudo encontrar la evaluación.</p>
-            <Button variant="outline" asChild className="mt-4">
-              <Link href="/assistant/pending-tests"><ArrowLeft className="mr-2 h-4 w-4" />Volver a Pruebas Pendientes</Link>
+            <Button variant="outline" onClick={() => router.push(backRoute)} className="mt-4">
+              <ArrowLeft className="mr-2 h-4 w-4" />{backLabel}
             </Button>
           </CardContent>
         </Card>
@@ -160,8 +167,8 @@ export default function DeportistasCarterTestPage() {
   return (
     <AuthWrapper allowedRoles={["Assistant", "Evaluator"]}>
       <div className="space-y-6">
-        <Button variant="outline" size="sm" onClick={() => router.push("/assistant/pending-tests")} className="mb-4">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Volver a Pruebas Pendientes
+        <Button variant="outline" size="sm" onClick={() => router.push(backRoute)} className="mb-4">
+          <ArrowLeft className="mr-2 h-4 w-4" /> {backLabel}
         </Button>
 
         <Card className="shadow-xl">
