@@ -46,7 +46,6 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TermsSections } from "@/components/terms/TermsSections";
-import FormQuestion from "./shared/FormQuestion";
 import {
   Card,
   CardContent,
@@ -1107,18 +1106,69 @@ useEffect(() => {
 
               <div className="space-y-4">
                 {parQQuestions.map((q) => (
-                  <div
+                  <FormField
                     key={q.name}
-                    className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4 shadow-sm"
-                  >
-                    <FormQuestion
-                      control={form.control}
-                      name={q.name as string}
-                      questionText={q.text}
-                      options={yesNoOptions}
-                      orientation="horizontal"
-                    />
-                  </div>
+                    control={form.control}
+                    name={q.name as any}
+                    render={({ field }) => (
+                      <FormItem className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4 shadow-sm">
+                        <FormLabel className="block text-sm font-semibold leading-relaxed text-slate-800">
+                          {q.text}
+                        </FormLabel>
+
+                        <FormControl>
+                          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                            {yesNoOptions.map((option) => {
+                              const isSelected = field.value === option.value;
+
+                              return (
+                                <div
+                                  key={option.value}
+                                  role="radio"
+                                  tabIndex={0}
+                                  aria-checked={isSelected}
+                                  onClick={() => field.onChange(option.value)}
+                                  onKeyDown={(event) => {
+                                    if (event.key === "Enter" || event.key === " ") {
+                                      event.preventDefault();
+                                      field.onChange(option.value);
+                                    }
+                                  }}
+                                  className={cn(
+                                    "flex h-12 w-full cursor-pointer select-none items-center gap-3 rounded-xl border px-4 text-left text-sm font-medium shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200",
+                                    isSelected
+                                      ? option.value === "si"
+                                        ? "border-red-400 bg-red-50 text-red-700 shadow-md"
+                                        : "border-emerald-400 bg-emerald-50 text-emerald-700 shadow-md"
+                                      : "border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:bg-blue-50/60 hover:text-blue-700"
+                                  )}
+                                >
+                                  <span
+                                    className={cn(
+                                      "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all",
+                                      isSelected
+                                        ? option.value === "si"
+                                          ? "border-red-500 bg-red-500"
+                                          : "border-emerald-500 bg-emerald-500"
+                                        : "border-blue-400 bg-white"
+                                    )}
+                                  >
+                                    {isSelected && (
+                                      <span className="h-2 w-2 rounded-full bg-white" />
+                                    )}
+                                  </span>
+
+                                  <span>{option.label}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </FormControl>
+
+                        <FormMessage className="text-xs" />
+                      </FormItem>
+                    )}
+                  />
                 ))}
               </div>
 

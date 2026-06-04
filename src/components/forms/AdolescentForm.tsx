@@ -41,7 +41,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useFormData } from "@/contexts/FormDataContext";
 import { useEvaluationContext } from "@/contexts/EvaluationContext";
 import { useToast } from "@/hooks/use-toast";
@@ -50,8 +49,6 @@ import { calculatePaqScore } from "@/lib/scoring";
 import type { Frequency, DailyActivityFrequency } from "@/lib/types";
 import { frequencyOptions, dailyActivityOptions } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import FormQuestion from "./shared/FormQuestion";
-import ActivityTableInput from "./shared/ActivityTableInput";
 import {
   Card,
   CardContent,
@@ -148,6 +145,201 @@ const q7options = [
     score: 5,
   },
 ];
+
+type RecuadroOption = {
+  value: string;
+  label: string;
+  score?: number;
+};
+
+function RecuadroRadioCard({
+  id,
+  value,
+  label,
+  selected,
+  onSelect,
+  className,
+}: {
+  id: string;
+  value: string;
+  label: string;
+  selected: boolean;
+  onSelect: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      id={id}
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      data-value={value}
+      onClick={(event) => {
+        event.preventDefault();
+        onSelect();
+      }}
+      className={cn(
+        "flex min-h-[48px] w-full cursor-pointer select-none items-center gap-3 rounded-xl border p-3 text-left text-sm shadow-sm outline-none transition-all focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-1",
+        selected
+          ? "border-blue-500 bg-blue-50 text-blue-800 shadow-blue-100 ring-2 ring-blue-100"
+          : "border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-blue-50/70 hover:text-blue-700",
+        className
+      )}
+    >
+      <span
+        aria-hidden="true"
+        className={cn(
+          "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all",
+          selected ? "border-blue-500 bg-blue-500" : "border-blue-400 bg-white"
+        )}
+      >
+        {selected && <span className="h-2.5 w-2.5 rounded-full bg-white" />}
+      </span>
+
+      <span className="leading-snug">{label}</span>
+    </button>
+  );
+}
+
+function RecuadroQuestion({
+  control,
+  name,
+  questionText,
+  options,
+}: {
+  control: any;
+  name: string;
+  questionText: string;
+  options: RecuadroOption[];
+}) {
+  return (
+    <FormField
+      control={control}
+      name={name as any}
+      render={({ field }) => (
+        <FormItem className="space-y-3">
+          <FormLabel className="text-base font-semibold text-slate-800">
+            {questionText}
+          </FormLabel>
+
+          <FormControl>
+            <div
+              role="radiogroup"
+              aria-label={questionText}
+              className="grid gap-2 md:grid-cols-2 xl:grid-cols-3"
+            >
+              {options.map((option) => (
+                <RecuadroRadioCard
+                  key={option.value}
+                  id={`${name}-${option.value}`}
+                  value={option.value}
+                  label={option.label}
+                  selected={String(field.value ?? "") === String(option.value)}
+                  onSelect={() => field.onChange(option.value)}
+                />
+              ))}
+            </div>
+          </FormControl>
+
+          <FormMessage className="text-xs" />
+        </FormItem>
+      )}
+    />
+  );
+}
+
+function ActivityTableRecuadros({
+  control,
+  activities,
+  options,
+  namePrefix,
+  otherFieldName,
+}: {
+  control: any;
+  activities: { id: string; label: string; isOther?: boolean }[];
+  options: RecuadroOption[];
+  namePrefix: string;
+  otherFieldName?: string;
+}) {
+  return (
+    <FormField
+      control={control}
+      name={namePrefix as any}
+      render={({ field }) => {
+        const currentValues = field.value || {};
+
+        return (
+          <div className="space-y-3">
+            {activities.map((activity) => {
+              const selectedValue = currentValues?.[activity.id] ?? "";
+              const showOtherInput =
+                activity.isOther &&
+                otherFieldName &&
+                selectedValue &&
+                selectedValue !== "no" &&
+                selectedValue !== "none" &&
+                selectedValue !== "ninguna";
+
+              return (
+                <div
+                  key={activity.id}
+                  className="rounded-2xl border border-slate-100 bg-white p-3 shadow-sm"
+                >
+                  <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <p className="text-sm font-semibold text-slate-700">
+                      {activity.label}
+                    </p>
+
+                    {showOtherInput && (
+                      <FormField
+                        control={control}
+                        name={otherFieldName as any}
+                        render={({ field: otherField }) => (
+                          <FormItem className="w-full md:max-w-xs">
+                            <FormControl>
+                              <Input
+                                {...otherField}
+                                className="h-9 rounded-xl border-slate-200 bg-slate-50/80 text-sm shadow-sm focus-visible:border-blue-400 focus-visible:ring-2 focus-visible:ring-blue-100"
+                                placeholder="Especificar otros"
+                              />
+                            </FormControl>
+                            <FormMessage className="text-xs" />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                  </div>
+
+                  <div
+                    role="radiogroup"
+                    aria-label={activity.label}
+                    className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+                  >
+                    {options.map((option) => (
+                      <RecuadroRadioCard
+                        key={option.value}
+                        id={`${namePrefix}-${activity.id}-${option.value}`}
+                        value={option.value}
+                        label={option.label}
+                        selected={String(selectedValue ?? "") === String(option.value)}
+                        onSelect={() => {
+                          field.onChange({
+                            ...(field.value || {}),
+                            [activity.id]: option.value,
+                          });
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      }}
+    />
+  );
+}
 
 const activityRecordSchema = z.record(
   z.enum(frequencyOptions.map((f) => f.value) as [Frequency, ...Frequency[]]).nullable()
@@ -737,14 +929,12 @@ export default function AdolescentForm() {
                   </FormLabel>
 
                   <div className="mt-3 overflow-hidden rounded-xl border border-slate-100 bg-slate-50/60 p-2">
-                    <ActivityTableInput
+                    <ActivityTableRecuadros
                       control={form.control}
                       activities={paqAActivities}
                       options={frequencyOptions}
                       namePrefix="paqA1_activities"
                       otherFieldName="paqA1_other_activity_text"
-                      watch={form.watch}
-                      setValue={form.setValue}
                     />
                   </div>
 
@@ -758,7 +948,7 @@ export default function AdolescentForm() {
 
               <div className="space-y-4">
                 <div className={questionClass}>
-                  <FormQuestion
+                  <RecuadroQuestion
                     control={form.control}
                     name="paqA2_educacion_fisica"
                     questionText="2. En los últimos 7 días, durante las clases de educación física. ¿Cuántas veces estuviste muy activo durante las clases: jugando intensamente, corriendo, saltando, haciendo lanzamiento?"
@@ -767,7 +957,7 @@ export default function AdolescentForm() {
                 </div>
 
                 <div className={questionClass}>
-                  <FormQuestion
+                  <RecuadroQuestion
                     control={form.control}
                     name="paqA3_hasta_almuerzo"
                     questionText="3. En los últimos 7 días, ¿Qué hiciste hasta el almuerzo además de comer?"
@@ -776,7 +966,7 @@ export default function AdolescentForm() {
                 </div>
 
                 <div className={questionClass}>
-                  <FormQuestion
+                  <RecuadroQuestion
                     control={form.control}
                     name="paqA4_despues_colegio"
                     questionText="4. En los últimos 7 días, ¿cuántos días después del colegio hiciste deportes, baile o jugaste a juegos en los que estuvieras muy activo? (2:00 p.m. a 6:00 p.m.)"
@@ -785,7 +975,7 @@ export default function AdolescentForm() {
                 </div>
 
                 <div className={questionClass}>
-                  <FormQuestion
+                  <RecuadroQuestion
                     control={form.control}
                     name="paqA5_tardes"
                     questionText="5. En los últimos 7 días, ¿cuántas tardes hiciste deporte, baile o juegos en los que estuviste muy activo? (6:00 p.m. en adelante)"
@@ -794,7 +984,7 @@ export default function AdolescentForm() {
                 </div>
 
                 <div className={questionClass}>
-                  <FormQuestion
+                  <RecuadroQuestion
                     control={form.control}
                     name="paqA6_fin_semana"
                     questionText="6. El último fin de semana, ¿cuántas veces hiciste deporte, baile o juegos en los que estuviste muy activo?"
@@ -803,7 +993,7 @@ export default function AdolescentForm() {
                 </div>
 
                 <div className={questionClass}>
-                  <FormQuestion
+                  <RecuadroQuestion
                     control={form.control}
                     name="paqA7_descripcion_semana"
                     questionText="7. ¿Cuál de las siguientes frases describe mejor tu última semana? Lee las cinco antes de decidir cuál te describe mejor."
@@ -820,7 +1010,7 @@ export default function AdolescentForm() {
                   </FormLabel>
 
                   <div className="mt-3 overflow-hidden rounded-xl border border-slate-100 bg-slate-50/60 p-2">
-                    <ActivityTableInput
+                    <ActivityTableRecuadros
                       control={form.control}
                       activities={daysOfWeek}
                       options={dailyActivityOptions}
@@ -848,29 +1038,27 @@ export default function AdolescentForm() {
                       </FormLabel>
 
                       <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
+                        <div
+                          role="radiogroup"
+                          aria-label="Pregunta 9"
                           className="grid gap-3 md:grid-cols-2"
                         >
-                          <FormItem className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/80 p-3 shadow-sm">
-                            <FormControl>
-                              <RadioGroupItem value="no" />
-                            </FormControl>
-                            <FormLabel className="cursor-pointer font-normal text-slate-600">
-                              No
-                            </FormLabel>
-                          </FormItem>
+                          <RecuadroRadioCard
+                            id="paqA9-enfermo-no"
+                            value="no"
+                            label="No"
+                            selected={field.value === "no"}
+                            onSelect={() => field.onChange("no")}
+                          />
 
-                          <FormItem className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/80 p-3 shadow-sm">
-                            <FormControl>
-                              <RadioGroupItem value="si" />
-                            </FormControl>
-                            <FormLabel className="cursor-pointer font-normal text-slate-600">
-                              Sí
-                            </FormLabel>
-                          </FormItem>
-                        </RadioGroup>
+                          <RecuadroRadioCard
+                            id="paqA9-enfermo-si"
+                            value="si"
+                            label="Sí"
+                            selected={field.value === "si"}
+                            onSelect={() => field.onChange("si")}
+                          />
+                        </div>
                       </FormControl>
 
                       <FormMessage className="text-xs" />

@@ -658,11 +658,45 @@ export default function TamizajePreparticipativo() {
   const sectionClass =
     "rounded-2xl border border-slate-100 bg-white/80 p-4 shadow-sm";
 
-  const optionBoxClass =
-    "flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/80 p-3 shadow-sm transition-all hover:bg-white";
+  const siNoBoxClass = (selected: boolean, tipo: "si" | "no") =>
+    cn(
+      "flex h-14 w-full cursor-pointer items-center gap-3 rounded-xl border p-3 text-left shadow-sm transition-all focus:outline-none focus:ring-2",
+      selected
+        ? tipo === "si"
+          ? "border-red-300 bg-red-50 text-red-800 ring-red-100"
+          : "border-emerald-300 bg-emerald-50 text-emerald-800 ring-emerald-100"
+        : "border-slate-100 bg-slate-50/80 text-slate-700 hover:border-blue-200 hover:bg-white hover:shadow-md"
+    );
 
-  const checkboxBoxClass =
-    "flex flex-row items-start gap-3 rounded-xl border border-slate-100 bg-white/80 p-3 shadow-sm";
+  const siNoIndicatorClass = (selected: boolean, tipo: "si" | "no") =>
+    cn(
+      "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-white transition-all",
+      selected
+        ? tipo === "si"
+          ? "border-red-500 bg-red-500"
+          : "border-emerald-500 bg-emerald-500"
+        : "border-slate-300 bg-white"
+    );
+
+  const checkboxCardClass = (selected: boolean, disabled: boolean) =>
+    cn(
+      "flex w-full items-start gap-3 rounded-xl border p-3 text-left shadow-sm transition-all",
+      disabled
+        ? "cursor-not-allowed border-slate-100 bg-slate-100/70 text-slate-400 opacity-70"
+        : selected
+          ? "cursor-pointer border-blue-300 bg-blue-50 text-blue-800 ring-2 ring-blue-100"
+          : "cursor-pointer border-slate-100 bg-white/80 text-slate-700 hover:border-blue-200 hover:bg-white hover:shadow-md"
+    );
+
+  const checkboxIndicatorClass = (selected: boolean, disabled: boolean) =>
+    cn(
+      "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-white transition-all",
+      disabled
+        ? "border-slate-300 bg-slate-100"
+        : selected
+          ? "border-blue-500 bg-blue-500"
+          : "border-slate-300 bg-white"
+    );
 
   return (
     <Card
@@ -907,34 +941,36 @@ export default function TamizajePreparticipativo() {
                   <FormItem className="space-y-3">
                     <FormControl>
                       <div className="grid gap-3 md:grid-cols-2">
-                        <label className={optionBoxClass}>
-                          <input
-                            type="radio"
-                            value="si"
-                            checked={field.value === "si"}
-                            onChange={() => field.onChange("si")}
-                            className="h-4 w-4"
-                          />
-                          <span className="text-sm font-medium text-slate-700">
+                        <button
+                          type="button"
+                          onClick={() => field.onChange("si")}
+                          className={siNoBoxClass(field.value === "si", "si")}
+                          aria-pressed={field.value === "si"}
+                        >
+                          <span className={siNoIndicatorClass(field.value === "si", "si")}>
+                            {field.value === "si" && <CheckCircle2 className="h-4 w-4" />}
+                          </span>
+                          <span className="text-sm font-semibold">
                             Sí participa
                           </span>
-                        </label>
+                        </button>
 
-                        <label className={optionBoxClass}>
-                          <input
-                            type="radio"
-                            value="no"
-                            checked={field.value === "no"}
-                            onChange={() => {
-                              field.onChange("no");
-                              form.setValue("tipoActividadFisica", "");
-                            }}
-                            className="h-4 w-4"
-                          />
-                          <span className="text-sm font-medium text-slate-700">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            field.onChange("no");
+                            form.setValue("tipoActividadFisica", "");
+                          }}
+                          className={siNoBoxClass(field.value === "no", "no")}
+                          aria-pressed={field.value === "no"}
+                        >
+                          <span className={siNoIndicatorClass(field.value === "no", "no")}>
+                            {field.value === "no" && <CheckCircle2 className="h-4 w-4" />}
+                          </span>
+                          <span className="text-sm font-semibold">
                             No participa
                           </span>
-                        </label>
+                        </button>
                       </div>
                     </FormControl>
 
@@ -1028,35 +1064,37 @@ export default function TamizajePreparticipativo() {
                   <FormItem className="space-y-3">
                     <FormControl>
                       <div className="grid gap-3 md:grid-cols-2">
-                        <label className={optionBoxClass}>
-                          <input
-                            type="radio"
-                            value="si"
-                            checked={field.value === "si"}
-                            onChange={() => field.onChange("si")}
-                            className="h-4 w-4"
-                          />
-                          <span className="text-sm font-medium text-slate-700">
+                        <button
+                          type="button"
+                          onClick={() => field.onChange("si")}
+                          className={siNoBoxClass(field.value === "si", "si")}
+                          aria-pressed={field.value === "si"}
+                        >
+                          <span className={siNoIndicatorClass(field.value === "si", "si")}>
+                            {field.value === "si" && <CheckCircle2 className="h-4 w-4" />}
+                          </span>
+                          <span className="text-sm font-semibold">
                             Sí presenta
                           </span>
-                        </label>
+                        </button>
 
-                        <label className={optionBoxClass}>
-                          <input
-                            type="radio"
-                            value="no"
-                            checked={field.value === "no"}
-                            onChange={() => {
-                              field.onChange("no");
-                              form.setValue("enfermedades", []);
-                              form.setValue("otraEnfermedad", "");
-                            }}
-                            className="h-4 w-4"
-                          />
-                          <span className="text-sm font-medium text-slate-700">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            field.onChange("no");
+                            form.setValue("enfermedades", []);
+                            form.setValue("otraEnfermedad", "");
+                          }}
+                          className={siNoBoxClass(field.value === "no", "no")}
+                          aria-pressed={field.value === "no"}
+                        >
+                          <span className={siNoIndicatorClass(field.value === "no", "no")}>
+                            {field.value === "no" && <CheckCircle2 className="h-4 w-4" />}
+                          </span>
+                          <span className="text-sm font-semibold">
                             No presenta
                           </span>
-                        </label>
+                        </button>
                       </div>
                     </FormControl>
 
@@ -1081,73 +1119,87 @@ export default function TamizajePreparticipativo() {
                             key={enf}
                             control={form.control}
                             name="enfermedades"
-                            render={({ field }) => (
-                              <FormItem className={checkboxBoxClass}>
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(enf)}
-                                    disabled={
-                                      tieneEnfermedadSeleccionada !== "si"
-                                    }
-                                    onCheckedChange={(checked) => {
-                                      return checked
-                                        ? field.onChange([
-                                            ...(field.value || []),
-                                            enf,
-                                          ])
-                                        : field.onChange(
+                            render={({ field }) => {
+                              const isChecked = field.value?.includes(enf) || false;
+                              const isDisabled = tieneEnfermedadSeleccionada !== "si";
+
+                              return (
+                                <FormItem>
+                                  <FormControl>
+                                    <button
+                                      type="button"
+                                      disabled={isDisabled}
+                                      onClick={() => {
+                                        if (isDisabled) return;
+
+                                        if (isChecked) {
+                                          field.onChange(
                                             field.value?.filter(
                                               (value) => value !== enf
                                             )
                                           );
-                                    }}
-                                    className="mt-0.5"
-                                  />
-                                </FormControl>
+                                        } else {
+                                          field.onChange([...(field.value || []), enf]);
+                                        }
+                                      }}
+                                      className={checkboxCardClass(isChecked, isDisabled)}
+                                    >
+                                      <span className={checkboxIndicatorClass(isChecked, isDisabled)}>
+                                        {isChecked && <CheckCircle2 className="h-3.5 w-3.5" />}
+                                      </span>
 
-                                <FormLabel className="cursor-pointer text-sm font-normal text-slate-700">
-                                  {enf}
-                                </FormLabel>
-                              </FormItem>
-                            )}
+                                      <span className="text-sm font-medium">
+                                        {enf}
+                                      </span>
+                                    </button>
+                                  </FormControl>
+                                </FormItem>
+                              );
+                            }}
                           />
                         ))}
 
                         <FormField
                           control={form.control}
                           name="enfermedades"
-                          render={({ field }) => (
-                            <FormItem className={checkboxBoxClass}>
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value?.includes("Otra")}
-                                  disabled={
-                                    tieneEnfermedadSeleccionada !== "si"
-                                  }
-                                  onCheckedChange={(checked) => {
-                                    if (checked) {
-                                      field.onChange([
-                                        ...(field.value || []),
-                                        "Otra",
-                                      ]);
-                                    } else {
-                                      field.onChange(
-                                        field.value?.filter(
-                                          (value) => value !== "Otra"
-                                        )
-                                      );
-                                      form.setValue("otraEnfermedad", "");
-                                    }
-                                  }}
-                                  className="mt-0.5"
-                                />
-                              </FormControl>
+                          render={({ field }) => {
+                            const isChecked = field.value?.includes("Otra") || false;
+                            const isDisabled = tieneEnfermedadSeleccionada !== "si";
 
-                              <FormLabel className="cursor-pointer text-sm font-normal text-slate-700">
-                                Otra
-                              </FormLabel>
-                            </FormItem>
-                          )}
+                            return (
+                              <FormItem>
+                                <FormControl>
+                                  <button
+                                    type="button"
+                                    disabled={isDisabled}
+                                    onClick={() => {
+                                      if (isDisabled) return;
+
+                                      if (isChecked) {
+                                        field.onChange(
+                                          field.value?.filter(
+                                            (value) => value !== "Otra"
+                                          )
+                                        );
+                                        form.setValue("otraEnfermedad", "");
+                                      } else {
+                                        field.onChange([...(field.value || []), "Otra"]);
+                                      }
+                                    }}
+                                    className={checkboxCardClass(isChecked, isDisabled)}
+                                  >
+                                    <span className={checkboxIndicatorClass(isChecked, isDisabled)}>
+                                      {isChecked && <CheckCircle2 className="h-3.5 w-3.5" />}
+                                    </span>
+
+                                    <span className="text-sm font-medium">
+                                      Otra
+                                    </span>
+                                  </button>
+                                </FormControl>
+                              </FormItem>
+                            );
+                          }}
                         />
                       </div>
 
@@ -1205,35 +1257,37 @@ export default function TamizajePreparticipativo() {
                   <FormItem className="space-y-3">
                     <FormControl>
                       <div className="grid gap-3 md:grid-cols-2">
-                        <label className={optionBoxClass}>
-                          <input
-                            type="radio"
-                            value="si"
-                            checked={field.value === "si"}
-                            onChange={() => field.onChange("si")}
-                            className="h-4 w-4"
-                          />
-                          <span className="text-sm font-medium text-slate-700">
+                        <button
+                          type="button"
+                          onClick={() => field.onChange("si")}
+                          className={siNoBoxClass(field.value === "si", "si")}
+                          aria-pressed={field.value === "si"}
+                        >
+                          <span className={siNoIndicatorClass(field.value === "si", "si")}>
+                            {field.value === "si" && <CheckCircle2 className="h-4 w-4" />}
+                          </span>
+                          <span className="text-sm font-semibold">
                             Sí presenta
                           </span>
-                        </label>
+                        </button>
 
-                        <label className={optionBoxClass}>
-                          <input
-                            type="radio"
-                            value="no"
-                            checked={field.value === "no"}
-                            onChange={() => {
-                              field.onChange("no");
-                              form.setValue("sintomas", []);
-                              form.setValue("otroSintoma", "");
-                            }}
-                            className="h-4 w-4"
-                          />
-                          <span className="text-sm font-medium text-slate-700">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            field.onChange("no");
+                            form.setValue("sintomas", []);
+                            form.setValue("otroSintoma", "");
+                          }}
+                          className={siNoBoxClass(field.value === "no", "no")}
+                          aria-pressed={field.value === "no"}
+                        >
+                          <span className={siNoIndicatorClass(field.value === "no", "no")}>
+                            {field.value === "no" && <CheckCircle2 className="h-4 w-4" />}
+                          </span>
+                          <span className="text-sm font-semibold">
                             No presenta
                           </span>
-                        </label>
+                        </button>
                       </div>
                     </FormControl>
 
@@ -1258,69 +1312,87 @@ export default function TamizajePreparticipativo() {
                             key={sint}
                             control={form.control}
                             name="sintomas"
-                            render={({ field }) => (
-                              <FormItem className={checkboxBoxClass}>
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(sint)}
-                                    disabled={tieneSintomasSeleccionado !== "si"}
-                                    onCheckedChange={(checked) => {
-                                      return checked
-                                        ? field.onChange([
-                                            ...(field.value || []),
-                                            sint,
-                                          ])
-                                        : field.onChange(
+                            render={({ field }) => {
+                              const isChecked = field.value?.includes(sint) || false;
+                              const isDisabled = tieneSintomasSeleccionado !== "si";
+
+                              return (
+                                <FormItem>
+                                  <FormControl>
+                                    <button
+                                      type="button"
+                                      disabled={isDisabled}
+                                      onClick={() => {
+                                        if (isDisabled) return;
+
+                                        if (isChecked) {
+                                          field.onChange(
                                             field.value?.filter(
                                               (value) => value !== sint
                                             )
                                           );
-                                    }}
-                                    className="mt-0.5"
-                                  />
-                                </FormControl>
+                                        } else {
+                                          field.onChange([...(field.value || []), sint]);
+                                        }
+                                      }}
+                                      className={checkboxCardClass(isChecked, isDisabled)}
+                                    >
+                                      <span className={checkboxIndicatorClass(isChecked, isDisabled)}>
+                                        {isChecked && <CheckCircle2 className="h-3.5 w-3.5" />}
+                                      </span>
 
-                                <FormLabel className="cursor-pointer text-sm font-normal text-slate-700">
-                                  {sint}
-                                </FormLabel>
-                              </FormItem>
-                            )}
+                                      <span className="text-sm font-medium">
+                                        {sint}
+                                      </span>
+                                    </button>
+                                  </FormControl>
+                                </FormItem>
+                              );
+                            }}
                           />
                         ))}
 
                         <FormField
                           control={form.control}
                           name="sintomas"
-                          render={({ field }) => (
-                            <FormItem className={checkboxBoxClass}>
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value?.includes("Otros")}
-                                  disabled={tieneSintomasSeleccionado !== "si"}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) {
-                                      field.onChange([
-                                        ...(field.value || []),
-                                        "Otros",
-                                      ]);
-                                    } else {
-                                      field.onChange(
-                                        field.value?.filter(
-                                          (value) => value !== "Otros"
-                                        )
-                                      );
-                                      form.setValue("otroSintoma", "");
-                                    }
-                                  }}
-                                  className="mt-0.5"
-                                />
-                              </FormControl>
+                          render={({ field }) => {
+                            const isChecked = field.value?.includes("Otros") || false;
+                            const isDisabled = tieneSintomasSeleccionado !== "si";
 
-                              <FormLabel className="cursor-pointer text-sm font-normal text-slate-700">
-                                Otros
-                              </FormLabel>
-                            </FormItem>
-                          )}
+                            return (
+                              <FormItem>
+                                <FormControl>
+                                  <button
+                                    type="button"
+                                    disabled={isDisabled}
+                                    onClick={() => {
+                                      if (isDisabled) return;
+
+                                      if (isChecked) {
+                                        field.onChange(
+                                          field.value?.filter(
+                                            (value) => value !== "Otros"
+                                          )
+                                        );
+                                        form.setValue("otroSintoma", "");
+                                      } else {
+                                        field.onChange([...(field.value || []), "Otros"]);
+                                      }
+                                    }}
+                                    className={checkboxCardClass(isChecked, isDisabled)}
+                                  >
+                                    <span className={checkboxIndicatorClass(isChecked, isDisabled)}>
+                                      {isChecked && <CheckCircle2 className="h-3.5 w-3.5" />}
+                                    </span>
+
+                                    <span className="text-sm font-medium">
+                                      Otros
+                                    </span>
+                                  </button>
+                                </FormControl>
+                              </FormItem>
+                            );
+                          }}
                         />
                       </div>
 

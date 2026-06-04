@@ -348,9 +348,11 @@ export default function IpaqForm() {
   }, [isClient, initialData]);
 
   const clampNumber = (value: string, min: number, max: number) => {
-    if (value === "") return 0;
+    const cleanValue = value.replace(/[^\d]/g, "").replace(/^0+(?=\d)/, "");
 
-    const numberValue = Number(value);
+    if (cleanValue === "") return 0;
+
+    const numberValue = Number(cleanValue);
 
     if (Number.isNaN(numberValue)) return min;
 
@@ -591,7 +593,10 @@ export default function IpaqForm() {
                             min={0}
                             max={7}
                             inputMode="numeric"
+                            step={1}
                             {...field}
+                            value={field.value === 0 ? "" : field.value}
+                            onFocus={(e) => e.currentTarget.select()}
                             disabled={watchNoVigorous}
                             className={inputClass}
                             onChange={(e) =>
@@ -652,7 +657,10 @@ export default function IpaqForm() {
                                   min={0}
                                   max={23}
                                   inputMode="numeric"
+                                  step={1}
                                   {...field}
+                                  value={field.value === 0 ? "" : field.value}
+                                  onFocus={(e) => e.currentTarget.select()}
                                   disabled={watchVigorousDontKnow}
                                   className={inputClass}
                                   onChange={(e) =>
@@ -681,7 +689,10 @@ export default function IpaqForm() {
                                   min={0}
                                   max={59}
                                   inputMode="numeric"
+                                  step={1}
                                   {...field}
+                                  value={field.value === 0 ? "" : field.value}
+                                  onFocus={(e) => e.currentTarget.select()}
                                   disabled={watchVigorousDontKnow}
                                   className={inputClass}
                                   onChange={(e) =>
@@ -753,7 +764,10 @@ export default function IpaqForm() {
                             min={0}
                             max={7}
                             inputMode="numeric"
+                            step={1}
                             {...field}
+                            value={field.value === 0 ? "" : field.value}
+                            onFocus={(e) => e.currentTarget.select()}
                             disabled={watchNoModerate}
                             className={inputClass}
                             onChange={(e) =>
@@ -814,7 +828,10 @@ export default function IpaqForm() {
                                   min={0}
                                   max={23}
                                   inputMode="numeric"
+                                  step={1}
                                   {...field}
+                                  value={field.value === 0 ? "" : field.value}
+                                  onFocus={(e) => e.currentTarget.select()}
                                   disabled={watchModerateDontKnow}
                                   className={inputClass}
                                   onChange={(e) =>
@@ -843,7 +860,10 @@ export default function IpaqForm() {
                                   min={0}
                                   max={59}
                                   inputMode="numeric"
+                                  step={1}
                                   {...field}
+                                  value={field.value === 0 ? "" : field.value}
+                                  onFocus={(e) => e.currentTarget.select()}
                                   disabled={watchModerateDontKnow}
                                   className={inputClass}
                                   onChange={(e) =>
@@ -916,7 +936,10 @@ export default function IpaqForm() {
                             min={0}
                             max={7}
                             inputMode="numeric"
+                            step={1}
                             {...field}
+                            value={field.value === 0 ? "" : field.value}
+                            onFocus={(e) => e.currentTarget.select()}
                             disabled={watchNoWalk}
                             className={inputClass}
                             onChange={(e) =>
@@ -976,7 +999,10 @@ export default function IpaqForm() {
                                   min={0}
                                   max={23}
                                   inputMode="numeric"
+                                  step={1}
                                   {...field}
+                                  value={field.value === 0 ? "" : field.value}
+                                  onFocus={(e) => e.currentTarget.select()}
                                   disabled={watchWalkDontKnow}
                                   className={inputClass}
                                   onChange={(e) =>
@@ -1005,7 +1031,10 @@ export default function IpaqForm() {
                                   min={0}
                                   max={59}
                                   inputMode="numeric"
+                                  step={1}
                                   {...field}
+                                  value={field.value === 0 ? "" : field.value}
+                                  onFocus={(e) => e.currentTarget.select()}
                                   disabled={watchWalkDontKnow}
                                   className={inputClass}
                                   onChange={(e) =>
@@ -1084,7 +1113,10 @@ export default function IpaqForm() {
                               min={0}
                               max={23}
                               inputMode="numeric"
+                              step={1}
                               {...field}
+                              value={field.value === 0 ? "" : field.value}
+                              onFocus={(e) => e.currentTarget.select()}
                               disabled={watchSitDontKnow}
                               className={inputClass}
                               onChange={(e) =>
@@ -1111,7 +1143,10 @@ export default function IpaqForm() {
                               min={0}
                               max={59}
                               inputMode="numeric"
+                              step={1}
                               {...field}
+                              value={field.value === 0 ? "" : field.value}
+                              onFocus={(e) => e.currentTarget.select()}
                               disabled={watchSitDontKnow}
                               className={inputClass}
                               onChange={(e) =>

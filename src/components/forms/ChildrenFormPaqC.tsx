@@ -42,7 +42,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useFormData } from "@/contexts/FormDataContext";
 import { useEvaluationContext } from "@/contexts/EvaluationContext";
 import { useToast } from "@/hooks/use-toast";
@@ -51,8 +50,6 @@ import { calculatePaqScore } from "@/lib/scoring";
 import type { Frequency, DailyActivityFrequency } from "@/lib/types";
 import { frequencyOptions, dailyActivityOptions } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import FormQuestion from "./shared/FormQuestion";
-import ActivityTableInput from "./shared/ActivityTableInput";
 import {
   Card,
   CardContent,
@@ -242,6 +239,263 @@ const childrenFormSchema = z
 
 type ChildrenFormValues = z.infer<typeof childrenFormSchema>;
 
+
+type ClickableOption = {
+  value: string;
+  label: string;
+  score?: number;
+};
+
+type ClickableActivity = {
+  id: string;
+  label: string;
+  isOther?: boolean;
+};
+
+function SelectableOptionCard({
+  label,
+  selected,
+  onClick,
+}: {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={cn(
+        "group flex min-h-11 w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm transition-all duration-200",
+        selected
+          ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm ring-2 ring-blue-100"
+          : "border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-blue-50/70 hover:text-blue-700"
+      )}
+    >
+      <span
+        className={cn(
+          "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all duration-200",
+          selected
+            ? "border-blue-600 bg-blue-600 text-white"
+            : "border-blue-300 bg-white group-hover:border-blue-500"
+        )}
+      >
+        {selected && <CheckCircle2 className="h-3.5 w-3.5" />}
+      </span>
+
+      <span className="font-medium leading-snug">{label}</span>
+    </button>
+  );
+}
+
+function limpiarNumeroDecimal(value: unknown) {
+  const texto = String(value ?? "")
+    .replace(",", ".")
+    .replace(/[^\d.]/g, "");
+
+  if (!texto) return "";
+
+  const [enteroOriginal = "", ...decimalesOriginales] = texto.split(".");
+  const enteroLimpio = enteroOriginal.replace(/^0+(?=\d)/, "");
+
+  if (texto.includes(".")) {
+    const decimales = decimalesOriginales.join("").slice(0, 2);
+    return `${enteroLimpio || "0"}.${decimales}`;
+  }
+
+  return enteroLimpio;
+}
+
+function mostrarNumeroLimpio(value: unknown) {
+  if (value === null || value === undefined || value === "" || value === 0) {
+    return "";
+  }
+
+  return String(value).replace(/^0+(?=\d)/, "");
+}
+
+function moverNumeroConScroll(
+  event: React.WheelEvent<HTMLInputElement>,
+  value: unknown,
+  onChange: (value: string) => void,
+  minimo = 1,
+  salto = 0.1
+) {
+  event.preventDefault();
+
+  if (value === null || value === undefined || value === "") {
+    onChange(String(minimo));
+    return;
+  }
+
+  const numeroActual = Number(String(value).replace(",", "."));
+  const base = Number.isFinite(numeroActual) ? numeroActual : minimo;
+  const siguiente = event.deltaY < 0 ? base + salto : base - salto;
+  const valorFinal = Math.max(minimo, siguiente);
+
+  onChange(String(Number(valorFinal.toFixed(2))));
+}
+
+function ClickableFormQuestion({
+  control,
+  name,
+  questionText,
+  options,
+}: {
+  control: any;
+  name: any;
+  questionText: string;
+  options: ClickableOption[];
+}) {
+  const hasLongOptions = options.some((option) => option.label.length > 45);
+
+  return (
+    <FormField
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <FormItem className="space-y-3">
+          <FormLabel className="text-base font-semibold text-slate-800">
+            {questionText}
+          </FormLabel>
+
+          <FormControl>
+            <div
+              className={cn(
+                "grid gap-2",
+                hasLongOptions
+                  ? "md:grid-cols-1"
+                  : "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+              )}
+            >
+              {options.map((option) => (
+                <SelectableOptionCard
+                  key={option.value}
+                  label={option.label}
+                  selected={field.value === option.value}
+                  onClick={() => field.onChange(option.value)}
+                />
+              ))}
+            </div>
+          </FormControl>
+
+          <FormMessage className="text-xs" />
+        </FormItem>
+      )}
+    />
+  );
+}
+
+function ClickableActivityTableInput({
+  control,
+  activities,
+  options,
+  namePrefix,
+  otherFieldName,
+  watch,
+}: {
+  control: any;
+  activities: ClickableActivity[];
+  options: ClickableOption[];
+  namePrefix: string;
+  otherFieldName?: any;
+  watch?: any;
+  setValue?: any;
+}) {
+  const hasOtherColumn = Boolean(otherFieldName);
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div
+        className={cn(
+          "hidden gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 md:grid",
+          hasOtherColumn ? "md:grid-cols-[1fr_2.3fr_0.9fr]" : "md:grid-cols-[1fr_2.6fr]"
+        )}
+      >
+        <div>Actividad</div>
+        <div>Frecuencia</div>
+        {hasOtherColumn && <div>Especificar Otros</div>}
+      </div>
+
+      <div className="divide-y divide-slate-100">
+        {activities.map((activity) => (
+          <FormField
+            key={activity.id}
+            control={control}
+            name={`${namePrefix}.${activity.id}` as any}
+            render={({ field }) => {
+              const selectedValue = field.value ?? "";
+              const shouldShowOtherInput =
+                activity.isOther &&
+                otherFieldName &&
+                watch?.(`${namePrefix}.${activity.id}`) &&
+                watch?.(`${namePrefix}.${activity.id}`) !== "no";
+
+              return (
+                <FormItem
+                  className={cn(
+                    "grid gap-3 px-4 py-4 md:items-start",
+                    hasOtherColumn
+                      ? "md:grid-cols-[1fr_2.3fr_0.9fr]"
+                      : "md:grid-cols-[1fr_2.6fr]"
+                  )}
+                >
+                  <div className="flex items-center text-sm font-medium text-slate-600 md:min-h-11">
+                    {activity.label}
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+                      {options.map((option) => (
+                        <SelectableOptionCard
+                          key={option.value}
+                          label={option.label}
+                          selected={selectedValue === option.value}
+                          onClick={() => field.onChange(option.value)}
+                        />
+                      ))}
+                    </div>
+
+                    <FormMessage className="text-xs" />
+                  </div>
+
+                  {hasOtherColumn && (
+                    <div className="md:min-h-11">
+                      {shouldShowOtherInput ? (
+                        <FormField
+                          control={control}
+                          name={otherFieldName}
+                          render={({ field: otherField }) => (
+                            <FormItem className="space-y-1">
+                              <FormControl>
+                                <Input
+                                  {...otherField}
+                                  className="h-11 rounded-xl border-slate-200 bg-slate-50/80 text-sm shadow-sm focus-visible:border-blue-400 focus-visible:ring-2 focus-visible:ring-blue-100"
+                                  placeholder="Especifique"
+                                />
+                              </FormControl>
+                              <FormMessage className="text-xs" />
+                            </FormItem>
+                          )}
+                        />
+                      ) : (
+                        <span className="hidden text-xs text-slate-400 md:block">
+                          —
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </FormItem>
+              );
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function ChildrenFormPaqC() {
   const { initialData } = useFormData();
   const { addEvaluationRecord } = useEvaluationContext();
@@ -332,8 +586,8 @@ export default function ChildrenFormPaqC() {
       evalSex: undefined,
       evalDob: undefined,
       evalCalculatedAge: 0,
-      evalWeight: 0,
-      evalHeight: 0,
+      evalWeight: "" as unknown as number,
+      evalHeight: "" as unknown as number,
       paqC1_activities: Object.fromEntries(
         paqCActivities.map((act) => [act.id, null])
       ),
@@ -360,8 +614,8 @@ export default function ChildrenFormPaqC() {
         evalSex: initialData.sex || undefined,
         evalDob: initialData.dob ? new Date(initialData.dob) : undefined,
         evalCalculatedAge: Number(Number(initialData.calculated_age ?? 0).toFixed(2)),
-        evalWeight: 0,
-        evalHeight: 0,
+        evalWeight: "" as unknown as number,
+        evalHeight: "" as unknown as number,
         paqC1_activities: Object.fromEntries(
           paqCActivities.map((act) => [act.id, null])
         ),
@@ -784,9 +1038,21 @@ export default function ChildrenFormPaqC() {
                         <FormControl>
                           <Input
                             type="number"
+                            inputMode="decimal"
+                            min="1"
                             step="0.1"
-                            {...field}
+                            value={mostrarNumeroLimpio(field.value)}
+                            onChange={(e) => {
+                              field.onChange(limpiarNumeroDecimal(e.target.value));
+                            }}
+                            onWheel={(e) => {
+                              moverNumeroConScroll(e, field.value, field.onChange, 1, 0.1);
+                            }}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
                             className={inputClass}
+                            placeholder="Ej: 60.5"
                           />
                         </FormControl>
                         <FormMessage className="text-xs" />
@@ -803,9 +1069,21 @@ export default function ChildrenFormPaqC() {
                         <FormControl>
                           <Input
                             type="number"
+                            inputMode="decimal"
+                            min="1"
                             step="0.1"
-                            {...field}
+                            value={mostrarNumeroLimpio(field.value)}
+                            onChange={(e) => {
+                              field.onChange(limpiarNumeroDecimal(e.target.value));
+                            }}
+                            onWheel={(e) => {
+                              moverNumeroConScroll(e, field.value, field.onChange, 1, 0.1);
+                            }}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
                             className={inputClass}
+                            placeholder="Ej: 120.5"
                           />
                         </FormControl>
                         <FormMessage className="text-xs" />
@@ -846,14 +1124,13 @@ export default function ChildrenFormPaqC() {
                   </FormLabel>
 
                   <div className="mt-3 overflow-hidden rounded-xl border border-slate-100 bg-slate-50/60 p-2">
-                    <ActivityTableInput
+                    <ClickableActivityTableInput
                       control={form.control}
                       activities={paqCActivities}
                       options={frequencyOptions}
                       namePrefix="paqC1_activities"
                       otherFieldName="paqC1_other_activity_text"
                       watch={form.watch}
-                      setValue={form.setValue}
                     />
                   </div>
 
@@ -867,7 +1144,7 @@ export default function ChildrenFormPaqC() {
 
               <div className="space-y-4">
                 <div className={questionClass}>
-                  <FormQuestion
+                  <ClickableFormQuestion
                     control={form.control}
                     name="paqC2_educacion_fisica"
                     questionText="2. Durante las clases de educación física, ¿cuántas veces estuviste muy activo?"
@@ -876,7 +1153,7 @@ export default function ChildrenFormPaqC() {
                 </div>
 
                 <div className={questionClass}>
-                  <FormQuestion
+                  <ClickableFormQuestion
                     control={form.control}
                     name="paqC3_recreo"
                     questionText="3. ¿Qué hiciste durante el recreo?"
@@ -885,7 +1162,7 @@ export default function ChildrenFormPaqC() {
                 </div>
 
                 <div className={questionClass}>
-                  <FormQuestion
+                  <ClickableFormQuestion
                     control={form.control}
                     name="paqC4_antes_despues_comer"
                     questionText="4. ¿Qué hiciste antes y después de comer?"
@@ -894,7 +1171,7 @@ export default function ChildrenFormPaqC() {
                 </div>
 
                 <div className={questionClass}>
-                  <FormQuestion
+                  <ClickableFormQuestion
                     control={form.control}
                     name="paqC5_despues_colegio"
                     questionText="5. En los últimos 7 días, inmediatamente después del colegio, ¿cuántos días jugaste, hiciste deporte o bailaste en los que estuvieras muy activo?"
@@ -903,7 +1180,7 @@ export default function ChildrenFormPaqC() {
                 </div>
 
                 <div className={questionClass}>
-                  <FormQuestion
+                  <ClickableFormQuestion
                     control={form.control}
                     name="paqC6_noche"
                     questionText="6. En los últimos 7 días, ¿cuántos días entre las 6 p.m y 10 p.m jugaste, bailaste o hiciste deportes en los que estuvieras muy activo?"
@@ -912,7 +1189,7 @@ export default function ChildrenFormPaqC() {
                 </div>
 
                 <div className={questionClass}>
-                  <FormQuestion
+                  <ClickableFormQuestion
                     control={form.control}
                     name="paqC7_fin_semana"
                     questionText="7. El último fin de semana, ¿cuántas veces jugaste, bailaste o hiciste deportes en los que estuvieras muy activo?"
@@ -921,7 +1198,7 @@ export default function ChildrenFormPaqC() {
                 </div>
 
                 <div className={questionClass}>
-                  <FormQuestion
+                  <ClickableFormQuestion
                     control={form.control}
                     name="paqC8_descripcion_semana"
                     questionText="8. ¿Cuál de las siguientes frases describen mejor tu última semana? Lee las cinco antes de decidir cuál te describe mejor."
@@ -938,7 +1215,7 @@ export default function ChildrenFormPaqC() {
                   </FormLabel>
 
                   <div className="mt-3 overflow-hidden rounded-xl border border-slate-100 bg-slate-50/60 p-2">
-                    <ActivityTableInput
+                    <ClickableActivityTableInput
                       control={form.control}
                       activities={daysOfWeek}
                       options={dailyActivityOptions}
@@ -966,29 +1243,19 @@ export default function ChildrenFormPaqC() {
                       </FormLabel>
 
                       <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          className="grid gap-3 md:grid-cols-2"
-                        >
-                          <FormItem className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/80 p-3 shadow-sm">
-                            <FormControl>
-                              <RadioGroupItem value="no" />
-                            </FormControl>
-                            <FormLabel className="cursor-pointer font-normal text-slate-600">
-                              No
-                            </FormLabel>
-                          </FormItem>
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <SelectableOptionCard
+                            label="No"
+                            selected={field.value === "no"}
+                            onClick={() => field.onChange("no")}
+                          />
 
-                          <FormItem className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/80 p-3 shadow-sm">
-                            <FormControl>
-                              <RadioGroupItem value="si" />
-                            </FormControl>
-                            <FormLabel className="cursor-pointer font-normal text-slate-600">
-                              Sí
-                            </FormLabel>
-                          </FormItem>
-                        </RadioGroup>
+                          <SelectableOptionCard
+                            label="Sí"
+                            selected={field.value === "si"}
+                            onClick={() => field.onChange("si")}
+                          />
+                        </div>
                       </FormControl>
 
                       <FormMessage className="text-xs" />
