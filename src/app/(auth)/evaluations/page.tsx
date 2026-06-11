@@ -556,7 +556,7 @@ export default function EvaluationsPage() {
                             <TableHead className="h-10 text-xs font-bold uppercase tracking-wide text-slate-500">
                               Estado / Prueba
                             </TableHead>
-                            <TableHead className="h-10 pr-5 text-right text-xs font-bold uppercase tracking-wide text-slate-500">
+                            <TableHead className="h-9 text-xs font-bold uppercase tracking-wide text-slate-500 text-center pr-6">
                               Acciones
                             </TableHead>
                           </TableRow>
@@ -688,7 +688,7 @@ export default function EvaluationsPage() {
                                         href={`/evaluations/${record.id}`}
                                         className="inline-flex items-center justify-center gap-2"
                                       >
-                                        <Eye className="h-4 w-4" />
+                                        <Eye className="h-4 w-8" />
                                         Ver
                                       </Link>
                                     </Button>
